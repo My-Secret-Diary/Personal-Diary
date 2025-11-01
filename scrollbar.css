@@ -1,0 +1,23 @@
+html {
+  scrollbar-width: thin;
+  scrollbar-color: #2563eb #f4f7fb;
+}
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #f4f7fb;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background-color: #2563eb;
+  border-radius: 10px;
+  border: 2px solid #f4f7fb;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: #1d4ed8;
+}
+body {
+  overflow-y: scroll;
+  overflow-x: hidden;
+}
