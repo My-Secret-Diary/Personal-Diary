@@ -1,241 +1,571 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>My Secret Diary</title>
-  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&family=Patrick+Hand&display=swap" rel="stylesheet">
   <style>
-    body {
-      font-family: 'Quicksand', sans-serif;
-      background: #f6f9fc;
-      margin: 0;
-      padding: 0;
-      height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
+    :root{
+      --accent:#2b6cb0;
+      --accent-strong:#1e4e8a;
+      --muted:#6b7280;
+      --bg:#f6f9fc;
+      --card:#fff;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:Quicksand,system-ui,Arial;
+      background:var(--bg);
+      min-height:100vh;
+      display:flex;
+      justify-content:center;
+      align-items:flex-start;
+      padding:30px;
+      transition:background .2s, color .2s;
     }
 
-    #login, #diary {
-      background: white;
-      border-radius: 20px;
-      box-shadow: 0 6px 30px rgba(0,0,0,0.1);
-      padding: 40px;
-      width: 800px;
-      max-width: 95%;
-      transition: 0.3s;
+    /* container */
+    .wrap{width:100%;max-width:1100px}
+    .topbar{
+      display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;
+    }
+    .brand{display:flex;align-items:center;gap:12px}
+    .logo{width:56px;height:56px;border-radius:10px;background:linear-gradient(135deg,#fff,#f7efe3);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--accent);box-shadow:0 8px 30px rgba(16,24,40,.06)}
+    h1.title{margin:0;font-size:20px}
+
+    /* page layout */
+    .app{display:grid;grid-template-columns:340px 1fr;gap:18px}
+    .panel{background:var(--card);border-radius:12px;padding:14px;box-shadow:0 10px 40px rgba(15,23,42,0.06)}
+    .panel.small{padding:10px}
+
+    /* calendar */
+    .month-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+    .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+    .dayname{font-size:12px;color:var(--muted);text-align:center}
+    .date{min-height:72px;border-radius:8px;padding:8px;background:linear-gradient(180deg,#fff,#fbfdff);border:1px solid #f0f3f7;cursor:pointer}
+    .date.today{outline:2px solid #fde68a}
+    .date.has{box-shadow:inset 0 -4px 0 rgba(43,108,176,0.06)}
+    .date .num{font-weight:700}
+    .date .preview{font-size:12px;color:var(--muted);margin-top:6px;max-height:48px;overflow:hidden}
+
+    /* editor */
+    .editor-col{display:flex;flex-direction:column;height:700px}
+    .editor-meta{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+    .editor-meta .left{display:flex;gap:10px;align-items:center}
+    .editor-meta .right{display:flex;gap:8px;align-items:center}
+    .paper{flex:1;border-radius:12px;background:#fffef6;padding:18px;border:1px solid #efe9d6;box-shadow:0 10px 32px rgba(17,24,39,0.04);overflow:auto}
+    #editor{min-height:480px;outline:none;font-family:'Patrick Hand', Georgia, serif;font-size:18px;line-height:1.6;color:#111}
+    .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+    .tool{background:#e6e9ef;border-radius:8px;padding:8px;border:1px solid #d9dde3;cursor:pointer;display:flex;align-items:center;justify-content:center;min-width:36px;min-height:36px}
+    .tool.active{background:#2b6cb0;color:white;border-color:transparent;box-shadow:0 6px 18px rgba(43,108,176,0.18)}
+    .tool.color-preview{width:36px;height:36px;border-radius:6px;border:2px solid #fff;box-sizing:border-box}
+    .muted{color:var(--muted)}
+    .small{font-size:13px;color:var(--muted)}
+
+    /* login modal */
+    .login-wrap{min-height:80vh;display:flex;align-items:center;justify-content:center}
+    .login-card{width:480px;border-radius:14px;padding:26px;background:var(--card);box-shadow:0 18px 60px rgba(15,23,42,0.08)}
+
+    /* actions */
+    .actions-top{display:flex;gap:8px;align-items:center}
+    .actions-top .ghost{background:transparent;color:var(--accent);border:1px solid rgba(43,108,176,0.12);padding:8px 10px;border-radius:8px}
+    .save-row{display:flex;justify-content:flex-end;margin-top:12px;gap:8px}
+    .btn{padding:10px 14px;border-radius:10px;border:0;background:var(--accent);color:#fff;cursor:pointer}
+    .btn.ghost{background:transparent;color:var(--accent);border:1px solid rgba(43,108,176,0.12)}
+
+    /* small screens */
+    @media (max-width:980px){
+      .app{grid-template-columns:1fr}
+      .editor-col{height:640px}
     }
 
-    h1 {
-      text-align: center;
-      color: #333;
-      margin-bottom: 20px;
-    }
-
-    input, button, select {
-      font-family: inherit;
-      font-size: 15px;
-      padding: 10px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      outline: none;
-      width: 100%;
-      margin: 5px 0;
-    }
-
-    button {
-      background: #4a90e2;
-      color: white;
-      border: none;
-      cursor: pointer;
-      transition: 0.2s;
-    }
-    button:hover { background: #357abd; }
-
-    #toolbar {
-      margin: 10px 0;
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    #toolbar button {
-      flex: 1;
-      padding: 8px;
-      border-radius: 6px;
-      background: #e6e9ef;
-      color: #333;
-      border: 1px solid #ccc;
-    }
-    #toolbar button:hover {
-      background: #d0d3da;
-    }
-
-    #editor {
-      border: 1px solid #ccc;
-      border-radius: 10px;
-      padding: 15px;
-      background: #fafafa;
-      height: 400px;
-      overflow-y: auto;
-      font-size: 16px;
-      line-height: 1.5;
-    }
-
-    #calendar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 15px;
-    }
-
-    #calendar input {
-      width: auto;
-    }
-
-    #actionButtons {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      margin-top: 15px;
-    }
+    /* dark theme */
+    body.dark{background: #0b1020;color:#cbd5e1}
+    body.dark .panel{background:#071025}
+    body.dark .paper{background:#07102a;color:#e6eef6;border-color:#0a2138}
+    body.dark .tool{background:#0f1724;color:#cbd5e1;border-color:#0b1b2f}
+    body.dark .tool.active{background:#1f6feb}
   </style>
 </head>
 <body>
-  <div id="login">
-    <h1>🔒 My Secret Diary</h1>
-    <p style="text-align:center;">Enter your diary password</p>
-    <input type="password" id="passwordInput" placeholder="Password">
-    <button id="loginBtn">Login</button>
-  </div>
+  <div class="wrap" id="root"></div>
 
-  <div id="diary" style="display:none;">
-    <h1 id="diaryTitle">My Secret Diary</h1>
-    <div id="calendar">
-      <input type="date" id="datePicker" />
+  <template id="login-template">
+    <div class="login-wrap">
+      <div class="login-card">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <div class="logo">D</div>
+          <div><h2 style="margin:0">My secret diary</h2><div class="small muted">Enter the diary password</div></div>
+        </div>
+        <div class="small muted" style="margin-bottom:8px">Default password is <strong>53458678</strong> (you can change it later)</div>
+        <input id="passwordInput" type="password" placeholder="Password" style="padding:10px;border-radius:8px;border:1px solid #e6e9ef;width:100%;margin-bottom:12px">
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button id="initReset" class="btn ghost">Reset to defaults</button>
+          <button id="loginBtn" class="btn">Open diary</button>
+        </div>
+      </div>
     </div>
+  </template>
 
-    <div id="toolbar">
-      <button onclick="execCmd('bold')"><b>B</b></button>
-      <button onclick="execCmd('italic')"><i>I</i></button>
-      <button onclick="execCmd('underline')"><u>U</u></button>
-      <button onclick="execCmd('strikeThrough')">S</button>
-      <button onclick="execCmd('hiliteColor', 'yellow')">🖍 Highlight</button>
-      <button onclick="execCmd('foreColor', prompt('Enter color (name or hex):', '#ff0000'))">🎨 Color</button>
+  <template id="app-template">
+    <div>
+      <div class="topbar">
+        <div class="brand">
+          <div class="logo">D</div>
+          <div>
+            <h1 class="title" id="diaryTitle">My secret diary</h1>
+            <div class="small muted">Private — synced & encrypted</div>
+          </div>
+        </div>
+        <div class="actions-top">
+          <button id="themeToggle" class="ghost">Toggle theme</button>
+          <button id="uploadBgBtn" class="ghost">Upload background</button>
+          <input type="file" id="bgFile" accept="image/*" style="display:none">
+        </div>
+      </div>
+
+      <div class="app">
+        <div class="panel">
+          <div class="month-head">
+            <h3 id="monthLabel">Month</h3>
+            <div style="display:flex;gap:8px">
+              <button id="prevMonth" class="ghost">◀</button>
+              <button id="nextMonth" class="ghost">▶</button>
+            </div>
+          </div>
+
+          <div class="cal-grid" id="calNames">
+            <div class="dayname">Sun</div><div class="dayname">Mon</div><div class="dayname">Tue</div><div class="dayname">Wed</div><div class="dayname">Thu</div><div class="dayname">Fri</div><div class="dayname">Sat</div>
+          </div>
+
+          <div class="cal-grid" id="calendarGrid" style="margin-top:8px"></div>
+        </div>
+
+        <div class="panel editor-col">
+          <div class="editor-meta">
+            <div class="left">
+              <div style="display:flex;align-items:center;gap:8px">
+                <button id="renameBtn" class="ghost">Rename</button>
+                <button id="changePassBtn" class="ghost">Change password</button>
+              </div>
+            </div>
+            <div class="right">
+              <input id="datePicker" type="date" style="padding:8px;border-radius:8px;border:1px solid #e6e9ef">
+            </div>
+          </div>
+
+          <div class="toolbar" id="toolbar">
+            <div class="tool" data-cmd="bold" title="Bold"><strong>B</strong></div>
+            <div class="tool" data-cmd="italic" title="Italic"><em>I</em></div>
+            <div class="tool" data-cmd="underline" title="Underline"><u>U</u></div>
+            <div class="tool" data-cmd="strikeThrough" title="Strike">S</div>
+            <div class="tool" id="highlightBtn" data-cmd="hiliteColor" title="Highlight">🖍</div>
+            <div class="tool" id="colorBtn" title="Color">🎨</div>
+            <input type="color" id="colorPicker" style="display:none">
+            <div class="tool" id="clearFormat" title="Clear formatting">Tx</div>
+          </div>
+
+          <div class="paper">
+            <div id="editor" contenteditable="true" spellcheck="true" aria-label="Diary editor"></div>
+          </div>
+
+          <div class="save-row">
+            <button id="saveBtn" class="btn">💾 Save entry</button>
+          </div>
+        </div>
+      </div>
     </div>
-
-    <div id="editor" contenteditable="true"></div>
-
-    <div id="actionButtons">
-      <button id="saveBtn">💾 Save</button>
-      <button id="renameBtn" style="background-color:#6c6;">Rename Diary</button>
-      <button id="changePassBtn" style="background-color:#f66;">Change Password</button>
-    </div>
-  </div>
+  </template>
 
   <script type="module">
-    // Firebase setup
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
-    import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
+  // ------------- Firebase & Crypto Diary (single-file) -------------
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
+  import { getFirestore, doc, getDoc, setDoc, collection, getDocs, onSnapshot } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyDRpLl01xtSZ7f0ZbId7zFASUJoem4L69s",
-      authDomain: "my-secret-diary-9b62c.firebaseapp.com",
-      projectId: "my-secret-diary-9b62c",
-      storageBucket: "my-secret-diary-9b62c.firebasestorage.app",
-      messagingSenderId: "139353851381",
-      appId: "1:139353851381:web:3050a47540d36a2243ccbc"
-    };
+  // ---------- CONFIG (your provided config) ----------
+  const firebaseConfig = {
+    apiKey: "AIzaSyDRpLl01xtSZ7f0ZbId7zFASUJoem4L69s",
+    authDomain: "my-secret-diary-9b62c.firebaseapp.com",
+    projectId: "my-secret-diary-9b62c",
+    storageBucket: "my-secret-diary-9b62c.firebasestorage.app",
+    messagingSenderId: "139353851381",
+    appId: "1:139353851381:web:3050a47540d36a2243ccbc"
+  };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
 
-    const loginDiv = document.getElementById("login");
-    const diaryDiv = document.getElementById("diary");
-    const passwordInput = document.getElementById("passwordInput");
-    const loginBtn = document.getElementById("loginBtn");
-    const diaryTitle = document.getElementById("diaryTitle");
-    const datePicker = document.getElementById("datePicker");
-    const editor = document.getElementById("editor");
-    const saveBtn = document.getElementById("saveBtn");
-    const changePassBtn = document.getElementById("changePassBtn");
-    const renameBtn = document.getElementById("renameBtn");
+  // ---------- Helper crypto functions ----------
+  // utils
+  function toBase64(buf){ return btoa(String.fromCharCode(...new Uint8Array(buf))); }
+  function fromBase64(b64){ const bin = atob(b64); const arr = new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i); return arr.buffer; }
+  function bufToHex(buffer){ return Array.from(new Uint8Array(buffer)).map(b=>b.toString(16).padStart(2,'0')).join(''); }
 
-    let currentPassword = "53458678";
-    let diaryName = "My Secret Diary";
+  async function deriveKeyFromPassword(password, saltBase64){
+    const salt = saltBase64 ? new Uint8Array(fromBase64(saltBase64)) : crypto.getRandomValues(new Uint8Array(16));
+    const pwUtf8 = new TextEncoder().encode(password);
+    const baseKey = await crypto.subtle.importKey('raw', pwUtf8, 'PBKDF2', false, ['deriveKey']);
+    const key = await crypto.subtle.deriveKey({
+      name: 'PBKDF2',
+      salt: salt,
+      iterations: 200000,
+      hash: 'SHA-256'
+    }, baseKey, { name: 'AES-GCM', length: 256 }, true, ['encrypt','decrypt']);
+    return { key, salt: toBase64(salt) };
+  }
 
-    async function loadSettings() {
-      const settingsDoc = await getDoc(doc(db, "entries", "settings"));
-      if (settingsDoc.exists()) {
-        const data = settingsDoc.data();
-        currentPassword = data.password || currentPassword;
-        diaryName = data.name || diaryName;
-        diaryTitle.textContent = diaryName;
+  async function generateMasterKey(){
+    const mk = await crypto.subtle.generateKey({ name:'AES-GCM', length:256 }, true, ['encrypt','decrypt']);
+    const raw = await crypto.subtle.exportKey('raw', mk);
+    return { masterKey: mk, raw: raw };
+  }
+
+  async function wrapMasterKey(masterKeyRaw, password){
+    // derive key
+    const { key, salt } = await deriveKeyFromPassword(password);
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const enc = await crypto.subtle.encrypt({ name:'AES-GCM', iv }, key, masterKeyRaw);
+    return { wrapped: toBase64(enc), iv: toBase64(iv), salt };
+  }
+
+  async function unwrapMasterKey(wrappedBase64, ivBase64, password, saltBase64){
+    const { key } = await deriveKeyFromPassword(password, saltBase64);
+    try{
+      const ct = fromBase64(wrappedBase64);
+      const iv = new Uint8Array(fromBase64(ivBase64));
+      const raw = await crypto.subtle.decrypt({ name:'AES-GCM', iv }, key, ct);
+      const mk = await crypto.subtle.importKey('raw', raw, 'AES-GCM', true, ['encrypt','decrypt']);
+      return { success:true, masterKey: mk, raw: raw };
+    } catch(e){
+      return { success:false, error:e };
+    }
+  }
+
+  async function encryptWithMaster(masterKey, plaintext){
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const data = new TextEncoder().encode(plaintext);
+    const ct = await crypto.subtle.encrypt({ name:'AES-GCM', iv }, masterKey, data);
+    return { iv: toBase64(iv), ct: toBase64(ct) };
+  }
+
+  async function decryptWithMaster(masterKey, ivBase64, ctBase64){
+    try{
+      const iv = new Uint8Array(fromBase64(ivBase64));
+      const ct = fromBase64(ctBase64);
+      const plainBuf = await crypto.subtle.decrypt({ name:'AES-GCM', iv }, masterKey, ct);
+      return new TextDecoder().decode(plainBuf);
+    } catch(e){
+      return null;
+    }
+  }
+
+  // ---------- Firestore paths ----------
+  const DIARY_DOC = doc(db, 'diary', 'main'); // stores wrappedKey, iv, salt, settingsEncrypted
+  function ENTRY_DOC(dateStr){ return doc(db, 'diary', 'main', 'entries', dateStr); }
+
+  // ---------- UI wiring ----------
+  const root = document.getElementById('root');
+  const loginT = document.getElementById('login-template');
+  const appT = document.getElementById('app-template');
+
+  let masterKey = null;       // CryptoKey used to encrypt/decrypt diary entries
+  let masterKeyRaw = null;    // ArrayBuffer raw master key
+  let storedSalt = null;
+  let storedWrapped = null;
+  let storedWrappedIv = null;
+  let diaryName = 'My secret diary';
+  let viewMonth = new Date();
+  let selectedDate = (new Date()).toISOString().slice(0,10);
+  let entriesCache = {}; // date -> { iv, ct } (ciphertext objects)
+
+  // initial render - show login
+  renderLogin();
+
+  // --------- Render functions ----------
+  function renderLogin(){
+    root.innerHTML = '';
+    const node = loginT.content.cloneNode(true);
+    root.appendChild(node);
+    const loginBtn = document.getElementById('loginBtn');
+    const passwordInput = document.getElementById('passwordInput');
+    const initReset = document.getElementById('initReset');
+
+    // reset logic: wipe remote doc and re-init (useful for dev)
+    initReset.addEventListener('click', async ()=>{
+      if(!confirm('Reset diary to defaults on Firestore? This will overwrite settings but keep entries as ciphertext.')) return;
+      // remove document? we'll re-create defaults
+      // (We cannot delete using CDN here easily; instead overwrite)
+      const defaultPass = '53458678';
+      const g = await generateMasterKey();
+      const wrap = await wrapMasterKey(g.raw, defaultPass);
+      const defaultSettings = await encryptWithMaster(await crypto.subtle.importKey('raw', g.raw, 'AES-GCM', true, ['encrypt','decrypt']), JSON.stringify({ name: 'My secret diary', background: null }));
+      await setDoc(DIARY_DOC, { wrappedKey: wrap.wrapped, wrappedIv: wrap.iv, salt: wrap.salt, settings: defaultSettings }, { merge:true });
+      alert('Reset complete.');
+    });
+
+    loginBtn.addEventListener('click', async ()=>{
+      const pass = passwordInput.value || '';
+      // try to load diary doc and attempt unwrap
+      const docSnap = await getDoc(DIARY_DOC);
+      if(!docSnap.exists()){
+        // initialize with default: create master key wrapped with default password (if first time)
+        const defaultPass = '53458678';
+        const g = await generateMasterKey();
+        const wrap = await wrapMasterKey(g.raw, defaultPass);
+        const defaultSettings = await encryptWithMaster(await crypto.subtle.importKey('raw', g.raw, 'AES-GCM', true, ['encrypt','decrypt']), JSON.stringify({ name: 'My secret diary', background: null }));
+        await setDoc(DIARY_DOC, { wrappedKey: wrap.wrapped, wrappedIv: wrap.iv, salt: wrap.salt, settings: defaultSettings });
+        storedWrapped = wrap.wrapped; storedWrappedIv = wrap.iv; storedSalt = wrap.salt;
+        alert('Diary initialized with default password 53458678. Use it to login.');
+        return;
       } else {
-        await setDoc(doc(db, "entries", "settings"), {
-          password: currentPassword,
-          name: diaryName
-        });
+        const d = docSnap.data();
+        storedWrapped = d.wrappedKey; storedWrappedIv = d.wrappedIv; storedSalt = d.salt;
+        // attempt unwrap with provided password
+        const res = await unwrapMasterKey(storedWrapped, storedWrappedIv, pass, storedSalt);
+        if(!res.success){ alert('Wrong password.'); return; }
+        masterKey = res.masterKey; masterKeyRaw = res.raw;
+        // decrypt settings
+        const settings = d.settings;
+        if(settings){
+          const sPlain = await decryptWithMaster(masterKey, settings.iv, settings.ct);
+          if(sPlain){ try{ const sObj = JSON.parse(sPlain); diaryName = sObj.name || diaryName; applyBackgroundFromData(sObj.background || null); }catch(e){} }
+        }
+        // load entries list (we'll subscribe)
+        await subscribeEntries();
+        renderApp();
+      }
+    });
+
+    passwordInput.addEventListener('keyup', (e)=>{ if(e.key==='Enter') loginBtn.click(); });
+  }
+
+  function renderApp(){
+    root.innerHTML = '';
+    const node = appT.content.cloneNode(true);
+    root.appendChild(node);
+
+    // get UI references
+    const diaryTitleEl = document.getElementById('diaryTitle');
+    const monthLabel = document.getElementById('monthLabel');
+    const calendarGrid = document.getElementById('calendarGrid');
+    const prevMonth = document.getElementById('prevMonth');
+    const nextMonth = document.getElementById('nextMonth');
+    const datePicker = document.getElementById('datePicker');
+    const editor = document.getElementById('editor');
+    const toolbar = document.getElementById('toolbar');
+    const saveBtn = document.getElementById('saveBtn');
+    const renameBtn = document.getElementById('renameBtn');
+    const changePassBtn = document.getElementById('changePassBtn');
+    const colorBtn = document.getElementById('colorBtn');
+    const colorPicker = document.getElementById('colorPicker');
+    const highlightBtn = document.getElementById('highlightBtn');
+    const clearFormat = document.getElementById('clearFormat');
+    const themeToggle = document.getElementById('themeToggle');
+    const bgFile = document.getElementById('bgFile');
+    const uploadBgBtn = document.getElementById('uploadBgBtn');
+
+    diaryTitleEl.textContent = diaryName;
+    datePicker.value = selectedDate;
+
+    // calendar render
+    function buildCalendar(){
+      calendarGrid.innerHTML = '';
+      const m = new Date(viewMonth.getFullYear(), viewMonth.getMonth(), 1);
+      monthLabel.textContent = m.toLocaleString(undefined,{month:'long', year:'numeric'});
+      const startDay = m.getDay();
+      const days = new Date(m.getFullYear(), m.getMonth()+1, 0).getDate();
+      for(let i=0;i<startDay;i++) calendarGrid.appendChild(document.createElement('div'));
+      for(let d=1; d<=days; d++){
+        const dateObj = new Date(m.getFullYear(), m.getMonth(), d);
+        const dateStr = dateObj.toISOString().slice(0,10);
+        const box = document.createElement('div'); box.className = 'date';
+        if(dateStr === (new Date()).toISOString().slice(0,10)) box.classList.add('today');
+        const num = document.createElement('div'); num.className='num'; num.textContent = d;
+        box.appendChild(num);
+        if(entriesCache[dateStr] && entriesCache[dateStr].ct){ box.classList.add('has'); const preview = document.createElement('div'); preview.className='preview'; preview.textContent = 'Saved entry'; box.appendChild(preview); }
+        box.addEventListener('click', ()=>{ selectedDate = dateStr; datePicker.value = dateStr; loadEntry(); });
+        calendarGrid.appendChild(box);
       }
     }
+    buildCalendar();
 
-    await loadSettings();
+    prevMonth.addEventListener('click', ()=>{ viewMonth.setMonth(viewMonth.getMonth()-1); buildCalendar(); });
+    nextMonth.addEventListener('click', ()=>{ viewMonth.setMonth(viewMonth.getMonth()+1); buildCalendar(); });
 
-    loginBtn.onclick = async () => {
-      if (passwordInput.value === currentPassword) {
-        loginDiv.style.display = "none";
-        diaryDiv.style.display = "block";
-        datePicker.valueAsDate = new Date();
-        loadEntry();
-      } else {
-        alert("Wrong password!");
-      }
-    };
+    // toolbar actions and color picker
+    toolbar.querySelectorAll('.tool').forEach(el=>{
+      el.addEventListener('click', async (e)=>{
+        const cmd = el.dataset.cmd;
+        if(!cmd) return;
+        if(cmd === 'hiliteColor'){
+          // highlight: use color picker with default yellow
+          colorPicker.value = '#fff176'; // soft yellow
+          colorPicker.click();
+          colorPicker.onchange = ()=>{ document.execCommand('hiliteColor', false, colorPicker.value); setActiveTool(highlightBtn); };
+          return;
+        }
+        if(cmd === 'foreColor'){
+          colorPicker.click();
+          colorPicker.onchange = ()=>{ document.execCommand('foreColor', false, colorPicker.value); setActiveTool(el); };
+          return;
+        }
+        document.execCommand(cmd, false, null);
+        setActiveTool(el);
+      });
+    });
 
-    async function loadEntry() {
-      const date = datePicker.value;
-      const entryDoc = await getDoc(doc(db, "entries", date));
-      editor.innerHTML = entryDoc.exists() ? entryDoc.data().text : "";
+    // color button separate (open color picker and apply as foreColor)
+    colorBtn.addEventListener('click', ()=>{ colorPicker.click(); });
+    colorPicker.addEventListener('input', ()=>{ document.execCommand('foreColor', false, colorPicker.value); setActiveTool(colorBtn); });
+
+    clearFormat.addEventListener('click', ()=>{ document.execCommand('removeFormat', false, null); setActiveTool(clearFormat); });
+
+    function setActiveTool(target){
+      toolbar.querySelectorAll('.tool').forEach(t=>t.classList.remove('active'));
+      if(target) target.classList.add('active');
+      setTimeout(()=> toolbar.querySelectorAll('.tool').forEach(t=>t.classList.remove('active')), 900);
     }
 
-    datePicker.onchange = loadEntry;
-
-    saveBtn.onclick = async () => {
+    // load entry for selected date
+    async function loadEntry(){
       const date = datePicker.value;
-      const text = editor.innerHTML;
-      await setDoc(doc(db, "entries", date), { text });
-      alert("Saved!");
-    };
+      selectedDate = date;
+      const docRef = ENTRY_DOC(date);
+      const snap = await getDoc(docRef);
+      if(snap.exists()){
+        const data = snap.data();
+        if(data.ct && data.iv){
+          const plain = await decryptWithMaster(masterKey, data.iv, data.ct);
+          if(plain !== null) editor.innerHTML = plain; else editor.innerHTML = '';
+        } else editor.innerHTML = '';
+      } else editor.innerHTML = '';
+    }
 
-    changePassBtn.onclick = async () => {
-      const newPass = prompt("Enter new password:");
-      if (newPass && newPass.trim() !== "") {
-        currentPassword = newPass;
-        await setDoc(doc(db, "entries", "settings"), {
-          password: currentPassword,
-          name: diaryName
-        });
-        alert("Password changed!");
+    // save
+    saveBtn.addEventListener('click', async ()=>{
+      const date = datePicker.value;
+      const html = editor.innerHTML;
+      const enc = await encryptWithMaster(masterKey, html);
+      await setDoc(ENTRY_DOC(date), { iv: enc.iv, ct: enc.ct, updatedAt: new Date().toISOString() });
+      entriesCache[date] = { iv: enc.iv, ct: enc.ct };
+      alert('Saved securely!');
+      buildCalendar();
+    });
+
+    // rename diary
+    renameBtn.addEventListener('click', async ()=>{
+      const newName = prompt('New diary name:', diaryName);
+      if(!newName) return;
+      diaryName = newName.trim();
+      // update settings encrypted blob
+      const settingsPlain = JSON.stringify({ name: diaryName, background: await getBackgroundData() });
+      const enc = await encryptWithMaster(masterKey, settingsPlain);
+      await setDoc(DIARY_DOC, { settings: enc }, { merge:true });
+      document.getElementById('diaryTitle').textContent = diaryName;
+      alert('Diary renamed');
+    });
+
+    // change password: unwrap master using current password is already done; now ask for new pass, re-wrap master key
+    changePassBtn.addEventListener('click', async ()=>{
+      const cur = prompt('Enter CURRENT password to confirm:');
+      if(cur === null) return;
+      // try unwrap using current stored salt/wrapped
+      const tryUnwrap = await unwrapMasterKey(storedWrapped, storedWrappedIv, cur, storedSalt);
+      if(!tryUnwrap.success){ alert('Current password incorrect'); return; }
+      const newPass = prompt('Enter NEW password: (remember this)');
+      if(!newPass || newPass.trim()===''){ alert('Password not changed'); return; }
+      // re-wrap masterKeyRaw with newPass
+      const wrap = await wrapMasterKey(masterKeyRaw, newPass);
+      await setDoc(DIARY_DOC, { wrappedKey: wrap.wrapped, wrappedIv: wrap.iv, salt: wrap.salt }, { merge:true });
+      storedWrapped = wrap.wrapped; storedWrappedIv = wrap.iv; storedSalt = wrap.salt;
+      alert('Password updated.');
+    });
+
+    // theme toggle
+    themeToggle.addEventListener('click', ()=>{ document.body.classList.toggle('dark'); });
+
+    // background upload + store encrypted to settings
+    uploadBgBtn.addEventListener('click', ()=> bgFile.click());
+    bgFile.addEventListener('change', async (e)=>{
+      const f = e.target.files[0];
+      if(!f) return;
+      const reader = new FileReader();
+      reader.onload = async ()=>{ 
+        const dataUrl = reader.result;
+        // store in settings encrypted
+        const settingsPlain = JSON.stringify({ name: diaryName, background: dataUrl });
+        const enc = await encryptWithMaster(masterKey, settingsPlain);
+        await setDoc(DIARY_DOC, { settings: enc }, { merge:true });
+        applyBackgroundFromData(dataUrl);
+        alert('Background uploaded and saved (encrypted).');
+      };
+      reader.readAsDataURL(f);
+    });
+
+    // load entry initially
+    loadEntry();
+  }
+
+  // ---------- Firestore subscription & helpers ----------
+  async function subscribeEntries(){
+    // On load, fetch all entry documents and settings
+    const docSnap = await getDoc(DIARY_DOC);
+    if(!docSnap.exists()) return;
+    const d = docSnap.data();
+    // settings handled at login
+    // fetch entries subcollection
+    try{
+      const entriesColl = collection(db, 'diary', 'main', 'entries');
+      const snaps = await getDocs(entriesColl);
+      snaps.forEach(s=>{
+        entriesCache[s.id] = s.data();
+      });
+    } catch(e){
+      console.warn('Failed to load entries list', e);
+    }
+  }
+
+  async function loadSettingsIfAny(){
+    const docSnap = await getDoc(DIARY_DOC);
+    if(!docSnap.exists()) return null;
+    const d = docSnap.data();
+    if(d.settings && masterKey){
+      const plain = await decryptWithMaster(masterKey, d.settings.iv, d.settings.ct);
+      if(plain) {
+        try{
+          const obj = JSON.parse(plain);
+          return obj;
+        }catch(e){ return null; }
       }
-    };
+    }
+    return null;
+  }
 
-    renameBtn.onclick = async () => {
-      const newName = prompt("Enter new diary name:");
-      if (newName && newName.trim() !== "") {
-        diaryName = newName;
-        diaryTitle.textContent = diaryName;
-        await setDoc(doc(db, "entries", "settings"), {
-          password: currentPassword,
-          name: diaryName
-        });
-        alert("Diary renamed!");
-      }
-    };
+  async function getBackgroundData(){
+    const settingsDoc = await getDoc(DIARY_DOC);
+    if(settingsDoc.exists() && settingsDoc.data().settings){
+      const s = settingsDoc.data().settings;
+      const plain = await decryptWithMaster(masterKey, s.iv, s.ct);
+      if(plain){ try{ const obj = JSON.parse(plain); return obj.background || null; } catch(e){} }
+    }
+    return null;
+  }
 
-    // Text formatting
-    window.execCmd = (command, value = null) => {
-      document.execCommand(command, false, value);
-    };
+  function applyBackgroundFromData(dataUrl){
+    if(!dataUrl) {
+      document.body.style.background = '';
+      return;
+    }
+    document.body.style.background = `url('${dataUrl}') center/cover fixed`;
+  }
+
+  // ---------- Initialization & utility (first-time setup) ----------
+  // If diary doc doesn't exist, create with default password wrapped
+  // This logic is triggered earlier at login when needed.
+
+  // ---------- END script ----------
   </script>
 </body>
 </html>
