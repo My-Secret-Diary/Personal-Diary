@@ -1,8 +1,8 @@
-/* 🧾 Right Column Scrollbar (only this new one) */
+/* 🧾 RIGHT COLUMN — Always show scrollbar */
 .rightCol {
-  overflow-y: auto;        /* Allow vertical scroll if content overflows */
-  overflow-x: hidden;      /* Prevent sideways scroll */
-  scrollbar-width: thin;   /* Firefox support */
+  overflow-y: scroll !important;  /* Always visible */
+  overflow-x: hidden !important;  /* No sideways scroll */
+  scrollbar-width: thin;
   scrollbar-color: #2563eb #f4f7fb;
 }
 
@@ -24,4 +24,9 @@
 
 .rightCol::-webkit-scrollbar-thumb:hover {
   background-color: #1d4ed8;
+}
+
+/* 🧰 TOOLBAR — Remove scroll completely */
+.toolbar {
+  overflow: hidden !important;
 }
