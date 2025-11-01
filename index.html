@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -88,7 +87,8 @@ display=swap" rel="stylesheet">
   .editorWrap{ padding:12px; border-radius:12px; border:1px solid rgba(0,0,0,0.05); min-height:480px; overflow:auto; background: rgba(255,255,255,0.85) }
   .editor{ min-height:420px; outline:none; font-size:16px; color:inherit; background:transparent; padding:12px; }
 
-  .saveFloating{ position:absolute; right:22px; bottom:22px; z-index:40; }
+  /* Save button fixed in viewport so it won't move when editor content changes */
+  .saveFloating{ position:fixed; right:22px; bottom:22px; z-index:40; }
 
   .palette{ position:relative; display:inline-block; }
   .palettePopup{ position:absolute; top:46px; left:0; background:var(--card); padding:8px; border-radius:8px; display:grid; grid-template-columns: repeat(6,24px); gap:8px; box-shadow:0 8px 30px rgba(2,6,23,0.08); z-index:50 }
@@ -103,7 +103,7 @@ display=swap" rel="stylesheet">
   body.dark{ background:#071225; color:#e6eefc; }
   body.dark .leftCol{ background:linear-gradient(180deg,#071225,#0b1420); color:#e6eefc; }
   body.dark .rightCol{ background:linear-gradient(180deg,#071225,#06101a); color:#e6eefc }
-  @media (max-width:980px){ .appWrap{ flex-direction:column; height:auto } .leftCol{ width:100%; order:2 } .rightCol{ order:1 } }
+  @media (max-width:980px){ .appWrap{ flex-direction:column; height:auto } .leftCol{ width:100%; order:2 } .rightCol{ order:1 } .saveFloating{ right:12px; bottom:12px } }
 </style>
 </head>
 <body>
@@ -226,13 +226,9 @@ display=swap" rel="stylesheet">
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 <script type="module">
-/* FULL working script:
-   - Login UI unchanged
-   - Rich editor with persistent formatting while typing
-   - Searchable font selector with many fonts
-   - Save/load encrypted HTML to Firestore at doc path: entries/YYYY-MM-DD
-   - Settings saved at entries/settings (bg, name, password)
-   - Calendar uses Asia/Kolkata timezone
+/* FULL working script with fixes for:
+   1) highlight toggling (caret normalization so toggling off prevents future typing from inheriting highlight)
+   2) save button staying fixed in bottom-right (doesn't move when editor grows)
 */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
@@ -323,7 +319,7 @@ function createColorSwatches(){
     s.title = c;
     s.onclick = ()=>{
       try{ document.execCommand('styleWithCSS', false, true); }catch(e){}
-      try{ document.execCommand('foreColor', false, c); }catch(e){}
+      try{ document.execCommand('foreColor', false, c); }catch(e){ console.warn('foreColor failed', e) }
       currentColor = c;
       colorPreview.style.background = c;
       colorPreview.title = c;
@@ -494,6 +490,72 @@ function updateToolbarStates(){
   }catch(e){}
 }
 
+// utility: insertAfter
+function insertAfter(newNode, referenceNode){
+  referenceNode.parentNode.insertBefore(newNode, referenceNode.nextSibling);
+}
+
+// utility: compare computed background color of element with highlightColor
+function cssBackgroundMatchesHighlight(el){
+  if(!el || el.nodeType !== 1) return false;
+  const tmp = document.createElement('div');
+  tmp.style.backgroundColor = highlightColor;
+  document.body.appendChild(tmp);
+  const desired = getComputedStyle(tmp).backgroundColor;
+  document.body.removeChild(tmp);
+  const cur = getComputedStyle(el).backgroundColor;
+  return cur === desired;
+}
+
+// When highlight is turned off, make sure caret is not inside a highlighted span.
+// Approach: if caret is collapsed and ancestor span has the highlight background, insert a spacer span (with zero-width) after the highlighted span and place caret inside spacer.
+function moveCaretOutOfHighlight(){
+  const sel = window.getSelection();
+  if(!sel || !sel.rangeCount) return;
+  const range = sel.getRangeAt(0);
+  if(!range.collapsed) return; // only needed when caret collapsed
+  let node = range.startContainer;
+  // ensure we have an element node to check ancestors
+  let ancestor = (node.nodeType === 3) ? node.parentElement : node;
+  while(ancestor && ancestor !== editor && ancestor.nodeType === 1){
+    if(cssBackgroundMatchesHighlight(ancestor)){
+      // found a highlighted ancestor - we need to move caret just after the highlighted element
+      const spacer = document.createElement('span');
+      // use a zero-width space so it's selectable; we'll remove it if user types normally
+      spacer.textContent = '\u200B';
+      // keep spacer with no background so typing happens outside highlight
+      spacer.style.background = 'transparent';
+      insertAfter(spacer, ancestor);
+      // place caret inside spacer (after the zero-width, i.e. at position 1)
+      const newRange = document.createRange();
+      newRange.setStart(spacer.firstChild, 1);
+      newRange.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
+      // small cleanup: when user types, the \u200B will be replaced by their text; optionally we can remove stray \u200B later
+      setTimeout(()=> {
+        // remove any spacer nodes that are empty (only contain zero-width) and not where caret currently is
+        try{
+          const allSpacers = editor.querySelectorAll('span');
+          allSpacers.forEach(s=>{
+            if(s.textContent === '\u200B'){
+              // keep this spacer only if selection is inside it; otherwise remove
+              const sel2 = window.getSelection();
+              if(sel2 && sel2.rangeCount){
+                const r = sel2.getRangeAt(0);
+                if(r.startContainer === s.firstChild) return; // keep it
+              }
+              s.remove();
+            }
+          });
+        }catch(e){}
+      }, 400);
+      return;
+    }
+    ancestor = ancestor.parentElement;
+  }
+}
+
 // toolbar bindings
 btnBold.onclick = ()=> execCmd('bold');
 btnItalic.onclick = ()=> execCmd('italic');
@@ -509,13 +571,27 @@ alignRight.onclick = ()=> execCmd('justifyRight');
 
 clearFmt.onclick = ()=> execCmd('removeFormat');
 
+// Highlight toggle: apply to selection if present, but crucially if turning off, normalize caret so typing afterwards doesn't keep highlight
 btnHighlight.onclick = ()=>{
   highlightActive = !highlightActive;
   btnHighlight.classList.toggle('active', highlightActive);
+
   const sel = window.getSelection();
   if(sel && sel.rangeCount && !sel.getRangeAt(0).collapsed){
+    // apply highlight to selected text immediately if selection exists
     try{ document.execCommand('styleWithCSS', false, true); }catch(e){}
     try{ document.execCommand('hiliteColor', false, highlightColor); }catch(e){ try{ document.execCommand('backColor', false, highlightColor); }catch(e){} }
+    updateToolbarStates();
+  } else {
+    // no selection - it's a typing-state toggle. If we turned OFF highlight, ensure caret is outside any highlighted node
+    if(!highlightActive){
+      // move caret out of highlighted span if needed
+      moveCaretOutOfHighlight();
+    } else {
+      // when switching highlight on with caret inside an empty spot that previously had no highlight,
+      // we do nothing now — the beforeinput handler will insert spans while typing.
+    }
+    updateToolbarStates();
   }
 };
 
@@ -531,6 +607,7 @@ editor.addEventListener('beforeinput', (e)=>{
     const span = document.createElement('span');
     if(currentColor) span.style.color = currentColor;
     if(highlightActive) span.style.backgroundColor = highlightColor;
+    // Avoid accidentally merging with adjacent identical spans by ensuring we create a fresh node
     span.textContent = e.data;
     range.insertNode(span);
     // move caret after span
@@ -542,6 +619,25 @@ editor.addEventListener('beforeinput', (e)=>{
   }
 });
 
+// cleanup helper: remove stray zero-width space nodes that may remain (keeps caret integrity)
+function cleanupZeroWidthSpacers(){
+  try{
+    const nodes = editor.querySelectorAll('span');
+    nodes.forEach(s=>{
+      if(s.textContent === '\u200B'){
+        // remove if empty and selection not inside it
+        const sel = window.getSelection();
+        let keep = false;
+        if(sel && sel.rangeCount){
+          const r = sel.getRangeAt(0);
+          if(r.startContainer === s.firstChild) keep = true;
+        }
+        if(!keep) s.remove();
+      }
+    });
+  }catch(e){}
+}
+
 // placeholder management
 function ensurePlaceholder(){
   if(!editor.innerText.trim()){
@@ -551,9 +647,18 @@ function ensurePlaceholder(){
     if(ph) ph.remove();
   }
 }
-editor.addEventListener('input', ()=>{ ensurePlaceholder(); updateToolbarStates(); });
+editor.addEventListener('input', ()=>{ 
+  // after input, remove leftover spacers if any
+  cleanupZeroWidthSpacers();
+  ensurePlaceholder(); 
+  updateToolbarStates(); 
+});
 editor.addEventListener('mouseup', updateToolbarStates);
 editor.addEventListener('keyup', updateToolbarStates);
+editor.addEventListener('focus', ()=> {
+  // on focus ensure caret is not stuck inside a highlight when highlight is OFF
+  if(!highlightActive) moveCaretOutOfHighlight();
+});
 
 // fonts list (many popular fonts). We added Google font links above to load them.
 const FONTS = [
