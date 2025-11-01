@@ -4,109 +4,88 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>My Secret Diary</title>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500&display=swap" rel="stylesheet">
   <style>
     body {
-      font-family: "Poppins", sans-serif;
-      background: #f7f6f3;
+      font-family: 'Quicksand', sans-serif;
+      background-color: #f4f7fb;
       margin: 0;
       padding: 0;
-      color: #333;
       display: flex;
       justify-content: center;
       align-items: center;
-      min-height: 100vh;
+      height: 100vh;
     }
-
     #login, #diary {
       background: white;
-      box-shadow: 0 0 15px rgba(0, 0, 0, 0.15);
-      border-radius: 15px;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
       padding: 30px;
-      width: 90%;
-      max-width: 500px;
-      display: none;
+      width: 360px;
+      max-width: 90%;
     }
-
-    #login.active, #diary.active {
-      display: block;
-    }
-
     h1 {
       text-align: center;
-      color: #3a3a3a;
+      color: #333;
     }
-
-    input, textarea, select, button {
+    input, textarea, button, select {
       width: 100%;
+      margin-top: 10px;
       padding: 10px;
       border-radius: 8px;
       border: 1px solid #ccc;
-      margin: 8px 0;
-      font-size: 16px;
+      outline: none;
+      font-size: 15px;
       font-family: inherit;
     }
-
     button {
-      background: #4cafef;
-      border: none;
+      background-color: #4a90e2;
       color: white;
-      font-weight: bold;
+      border: none;
       cursor: pointer;
+      transition: 0.2s;
     }
-
-    button:hover {
-      background: #3b9bdc;
-    }
-
-    .options {
+    button:hover { background-color: #357abd; }
+    #calendar {
       display: flex;
       justify-content: space-between;
-      margin-top: 10px;
+      align-items: center;
+      margin-top: 20px;
     }
-
-    .calendar {
-      margin: 10px 0;
+    #calendar input {
+      width: auto;
+      flex: 1;
     }
-
     textarea {
-      min-height: 150px;
-      resize: vertical;
+      height: 200px;
+      resize: none;
     }
   </style>
 </head>
 <body>
-
-  <div id="login" class="active">
+  <div id="login">
     <h1>🔒 My Secret Diary</h1>
-    <p>Enter password to unlock:</p>
-    <input type="password" id="passwordInput" placeholder="Enter password" />
-    <button id="loginBtn">Unlock</button>
+    <p>Enter your diary password</p>
+    <input type="password" id="passwordInput" placeholder="Password">
+    <button id="loginBtn">Login</button>
   </div>
 
-  <div id="diary">
+  <div id="diary" style="display:none;">
     <h1 id="diaryTitle">My Secret Diary</h1>
-
-    <div class="options">
-      <button id="changeNameBtn">📝 Change Name</button>
-      <button id="changePassBtn">🔑 Change Password</button>
-    </div>
-
-    <div class="calendar">
-      <label for="datePicker"><b>Select Date:</b></label>
+    <div id="calendar">
       <input type="date" id="datePicker" />
     </div>
-
-    <textarea id="diaryEntry" placeholder="Write your thoughts here..."></textarea>
+    <textarea id="entryText" placeholder="Start writing your thoughts..."></textarea>
     <button id="saveBtn">💾 Save Entry</button>
+    <button id="changePassBtn" style="background-color:#f66;">Change Password</button>
+    <button id="renameBtn" style="background-color:#6c6;">Rename Diary</button>
   </div>
 
-  <!-- Firebase SDK -->
   <script type="module">
-    // Import Firebase
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-    import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+    // Firebase setup
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
+    import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
 
-    // Your Firebase configuration
     const firebaseConfig = {
       apiKey: "AIzaSyDRpLl01xtSZ7f0ZbId7zFASUJoem4L69s",
       authDomain: "my-secret-diary-9b62c.firebaseapp.com",
@@ -116,99 +95,89 @@
       appId: "1:139353851381:web:3050a47540d36a2243ccbc"
     };
 
-    // Initialize Firebase
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // Default password
+    const loginDiv = document.getElementById("login");
+    const diaryDiv = document.getElementById("diary");
+    const passwordInput = document.getElementById("passwordInput");
+    const loginBtn = document.getElementById("loginBtn");
+    const diaryTitle = document.getElementById("diaryTitle");
+    const datePicker = document.getElementById("datePicker");
+    const entryText = document.getElementById("entryText");
+    const saveBtn = document.getElementById("saveBtn");
+    const changePassBtn = document.getElementById("changePassBtn");
+    const renameBtn = document.getElementById("renameBtn");
+
     let currentPassword = "53458678";
     let diaryName = "My Secret Diary";
 
-    // Elements
-    const loginDiv = document.getElementById("login");
-    const diaryDiv = document.getElementById("diary");
-    const loginBtn = document.getElementById("loginBtn");
-    const passwordInput = document.getElementById("passwordInput");
-    const diaryTitle = document.getElementById("diaryTitle");
-    const changeNameBtn = document.getElementById("changeNameBtn");
-    const changePassBtn = document.getElementById("changePassBtn");
-    const datePicker = document.getElementById("datePicker");
-    const diaryEntry = document.getElementById("diaryEntry");
-    const saveBtn = document.getElementById("saveBtn");
-
-    const diaryRef = doc(db, "diary", "main");
-
-    // Load saved data
-    async function loadDiaryData() {
-      const snap = await getDoc(diaryRef);
-      if (snap.exists()) {
-        const data = snap.data();
-        if (data.password) currentPassword = data.password;
-        if (data.name) diaryName = data.name;
+    async function loadSettings() {
+      const settingsDoc = await getDoc(doc(db, "entries", "settings"));
+      if (settingsDoc.exists()) {
+        const data = settingsDoc.data();
+        currentPassword = data.password || currentPassword;
+        diaryName = data.name || diaryName;
         diaryTitle.textContent = diaryName;
       } else {
-        await setDoc(diaryRef, {
+        await setDoc(doc(db, "entries", "settings"), {
           password: currentPassword,
-          name: diaryName,
-          entries: {}
+          name: diaryName
         });
       }
     }
 
-    // Login
+    await loadSettings();
+
     loginBtn.onclick = async () => {
-      await loadDiaryData();
       if (passwordInput.value === currentPassword) {
-        loginDiv.classList.remove("active");
-        diaryDiv.classList.add("active");
-        alert("Welcome to your diary 💖");
+        loginDiv.style.display = "none";
+        diaryDiv.style.display = "block";
+        datePicker.valueAsDate = new Date();
+        loadEntry();
       } else {
-        alert("❌ Incorrect password!");
+        alert("Wrong password!");
       }
     };
 
-    // Save diary entry
+    async function loadEntry() {
+      const date = datePicker.value;
+      const entryDoc = await getDoc(doc(db, "entries", date));
+      entryText.value = entryDoc.exists() ? entryDoc.data().text : "";
+    }
+
+    datePicker.onchange = loadEntry;
+
     saveBtn.onclick = async () => {
       const date = datePicker.value;
-      if (!date) return alert("Please select a date!");
-      const snap = await getDoc(diaryRef);
-      const data = snap.data();
-      data.entries[date] = diaryEntry.value;
-      await setDoc(diaryRef, data);
-      alert("✅ Entry saved!");
+      const text = entryText.value;
+      await setDoc(doc(db, "entries", date), { text });
+      alert("Saved!");
     };
 
-    // Load entry for date
-    datePicker.onchange = async () => {
-      const date = datePicker.value;
-      const snap = await getDoc(diaryRef);
-      const data = snap.data();
-      diaryEntry.value = data.entries[date] || "";
-    };
-
-    // Change diary name
-    changeNameBtn.onclick = async () => {
-      const newName = prompt("Enter new diary name:", diaryName);
-      if (!newName) return;
-      diaryName = newName;
-      diaryTitle.textContent = newName;
-      const snap = await getDoc(diaryRef);
-      const data = snap.data();
-      data.name = newName;
-      await setDoc(diaryRef, data);
-      alert("✅ Diary name updated!");
-    };
-
-    // Change password
     changePassBtn.onclick = async () => {
       const newPass = prompt("Enter new password:");
-      if (!newPass) return;
-      currentPassword = newPass;
-      const snap = await getDoc(diaryRef);
-      const data = snap.data();
-      data.password = newPass;
-      await setDoc(diaryRef, data);
-      alert("✅ Password changed!");
+      if (newPass && newPass.trim() !== "") {
+        currentPassword = newPass;
+        await setDoc(doc(db, "entries", "settings"), {
+          password: currentPassword,
+          name: diaryName
+        });
+        alert("Password changed!");
+      }
+    };
+
+    renameBtn.onclick = async () => {
+      const newName = prompt("Enter new diary name:");
+      if (newName && newName.trim() !== "") {
+        diaryName = newName;
+        diaryTitle.textContent = diaryName;
+        await setDoc(doc(db, "entries", "settings"), {
+          password: currentPassword,
+          name: diaryName
+        });
+        alert("Diary renamed!");
+      }
     };
   </script>
 </body>
