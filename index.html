@@ -1,198 +1,113 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>My Secret Diary</title>
-  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500&display=swap" rel="stylesheet">
-  <style>
-    * {
-      box-sizing: border-box;
-    }
-    body {
-      font-family: 'Quicksand', sans-serif;
-      background-color: #f4f7fb;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      transition: background-color 0.4s ease, color 0.4s ease;
-    }
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>My Secret Diary — Modern</title>
 
-    /* LOGIN SCREEN */
-    #login {
-      background: white;
-      border-radius: 16px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-      padding: 40px;
-      width: 400px;
-      text-align: center;
-    }
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --accent:#2563eb; /* blue accent */
+    --muted:#6b7280;
+    --card:#fff;
+    --bg:#f4f7fb;
+    --danger:#ef4444;
+    --radius:12px;
+  }
+  *{box-sizing:border-box}
+  body{ margin:0; font-family:'Quicksand',system-ui,Segoe UI,Roboto,Arial; background:var(--bg); min-height:100vh; display:flex; align-items:center; justify-content:center; padding:18px; color:#0f1720; transition: background .25s, color .25s; }
 
-    #login h1 {
-      color: #333;
-      margin-bottom: 20px;
-    }
+  /* ---------- KEEP LOGIN EXACTLY (only slightly bigger as requested earlier) ---------- */
+  #login {
+    background: var(--card);
+    border-radius: 16px;
+    box-shadow: 0 8px 30px rgba(2,6,23,0.06);
+    padding: 34px;
+    width: 420px;
+    max-width: 92%;
+    text-align: center;
+  }
+  #login h1{ margin:0 0 10px; font-size:20px }
+  #login p{ margin:0 0 10px; color:var(--muted) }
+  #login input, #login button{ width:100%; margin-top:10px; padding:10px; border-radius:8px; border:1px solid #d1d5db; font-size:15px; font-family:inherit; }
+  #login button{ background:var(--accent); color:white; border:none; cursor:pointer }
+  #login button:hover{ filter:brightness(.95) }
 
-    #login input, #login button {
-      width: 100%;
-      margin-top: 12px;
-      padding: 10px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      font-size: 16px;
-    }
+  /* ---------- APP LAYOUT ---------- */
+  #appRoot{ display:none; width:100%; max-width:1200px; height:86vh; background:transparent; }
+  .appWrap{ display:flex; height:100%; gap:18px; align-items:stretch; }
 
-    #login button {
-      background-color: #4a90e2;
-      color: white;
-      border: none;
-      cursor: pointer;
-      transition: 0.2s;
-    }
+  /* left calendar */
+  .leftCol{
+    width:300px; background:linear-gradient(180deg,#ffffff,#f7fbff); border-radius:var(--radius); padding:14px; box-shadow:0 10px 30px rgba(2,6,23,0.06); display:flex; flex-direction:column;
+  }
+  .monthHeader{ display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px }
+  .monthLabel{ font-weight:700 }
+  .calendarGrid{ display:grid; grid-template-columns:repeat(7,1fr); gap:8px; }
+  .weekday{ text-align:center; font-size:12px; color:var(--muted) }
+  .dayCell{ height:44px; border-radius:10px; display:flex; align-items:center; justify-content:center; position:relative; cursor:pointer; transition: transform .08s, background .12s; }
+  .dayCell:hover{ transform:translateY(-3px) }
+  .dayCell.today{ box-shadow: inset 0 0 0 2px rgba(37,99,235,0.08) }
+  .dayCell.selected{ background:var(--accent); color:white; }
+  .dot{ position:absolute; bottom:6px; width:8px; height:8px; background:var(--accent); border-radius:50%; display:none }
+  .dayCell.hasEntry .dot{ display:block }
+  .legend{ margin-top:12px; font-size:13px; color:var(--muted) }
 
-    #login button:hover {
-      background-color: #357abd;
-    }
+  /* right editor */
+  .rightCol{ flex:1; display:flex; flex-direction:column; gap:12px; padding:14px; border-radius:var(--radius); background:linear-gradient(180deg,#ffffff,#fbfdff); box-shadow:0 10px 30px rgba(2,6,23,0.06); position:relative; overflow:hidden; }
 
-    /* DIARY PAGE */
-    #diaryPage {
-      display: none;
-      width: 90%;
-      height: 90%;
-      max-width: 1200px;
-      background: white;
-      border-radius: 16px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-      display: flex;
-      overflow: hidden;
-      transition: background-color 0.4s ease, color 0.4s ease;
-    }
+  .topBar{ display:flex; justify-content:space-between; align-items:center; gap:12px; }
+  .titleBlock{ display:flex; flex-direction:column; gap:4px }
+  .titleBlock .title{ font-size:20px; font-weight:700 }
+  .titleBlock .sub{ font-size:13px; color:var(--muted) }
 
-    #calendar {
-      width: 30%;
-      background: #f4f7fb;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      border-right: 2px solid #ddd;
-    }
+  .topActions{ display:flex; gap:8px; align-items:center }
+  .squareBtn{ display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:8px 12px; border-radius:10px; border:none; background:#f8fafc; cursor:pointer; font-weight:600; color:var(--muted); min-width:90px }
+  .squareBtn.primary{ background:var(--accent); color:#fff; }
+  .squareBtn.warn{ background:var(--danger); color:#fff; }
+  .squareBtn:hover{ filter:brightness(.98) }
+  .squareSmall{ padding:8px; min-width:44px; border-radius:10px }
 
-    #calendar input[type="date"] {
-      font-size: 18px;
-      padding: 8px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      margin-top: 10px;
-    }
+  .toolbar{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:8px; border-radius:10px; background:rgba(10,20,40,0.03); }
+  .toolTextBtn{ padding:8px 12px; border-radius:8px; border:1px solid rgba(0,0,0,0.06); background:#fff; cursor:pointer; font-weight:700 }
+  .toolTextBtn.active{ background:var(--accent); color:#fff }
+  .toolIconBtn{ width:36px; height:36px; border-radius:8px; border:1px solid rgba(0,0,0,0.06); background:#fff; display:inline-flex; align-items:center; justify-content:center; cursor:pointer }
+  .toolIconBtn.active{ background:var(--accent); color:#fff; }
 
-    #editorSection {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      padding: 20px;
-      background-size: cover;
-      background-position: center;
-      background-repeat: no-repeat;
-    }
+  .colorPicker{ width:36px; height:36px; padding:0; border-radius:8px; border:1px solid rgba(0,0,0,0.06); cursor:pointer; background:#fff }
 
-    #toolbar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-bottom: 10px;
-      align-items: center;
-    }
+  .editorWrap{ padding:12px; border-radius:12px; border:1px solid rgba(0,0,0,0.05); min-height:420px; overflow:auto; background: rgba(255,255,255,0.85) }
+  .editorWrap[contenteditable="true"]{ cursor:text }
 
-    #toolbar button, #toolbar input[type="color"] {
-      padding: 8px 14px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      background: white;
-      cursor: pointer;
-      transition: 0.2s;
-    }
+  .editor{ min-height:380px; outline:none; font-size:16px; color:inherit; background:transparent; }
 
-    #toolbar button.active {
-      background-color: #4a90e2;
-      color: white;
-    }
+  .bottomRow{ display:flex; justify-content:flex-end; gap:8px; margin-top:8px; align-items:center }
 
-    #toolbar button:hover {
-      background-color: #dce9fa;
-    }
+  /* color palette popup */
+  .palette{ position:relative; display:inline-block; }
+  .palettePopup{ position:absolute; top:44px; left:0; background:var(--card); padding:8px; border-radius:8px; display:grid; grid-template-columns: repeat(6,24px); gap:8px; box-shadow:0 8px 30px rgba(2,6,23,0.08); z-index:50 }
+  .sw{ width:24px; height:24px; border-radius:6px; cursor:pointer; border:1px solid rgba(0,0,0,0.06) }
 
-    #editor {
-      flex: 1;
-      border: 1px solid #ccc;
-      border-radius: 10px;
-      padding: 12px;
-      font-size: 16px;
-      overflow-y: auto;
-      background: rgba(255,255,255,0.8);
-    }
+  /* dark theme */
+  body.dark{ background:#071225; color:#e6eefc; }
+  body.dark .leftCol{ background:linear-gradient(180deg,#071225,#0b1420); color:#e6eefc; border-right-color:rgba(255,255,255,0.03) }
+  body.dark .rightCol{ background:linear-gradient(180deg,#071225,#06101a); color:#e6eefc }
+  body.dark .editorWrap{ background: rgba(255,255,255,0.02); border-color:rgba(255,255,255,0.04) }
+  body.dark .toolTextBtn{ background:rgba(255,255,255,0.03); color:inherit }
+  body.dark .toolIconBtn{ background:rgba(255,255,255,0.03); color:inherit }
+  body.dark .squareBtn{ background:rgba(255,255,255,0.03); color:inherit; border:1px solid rgba(255,255,255,0.04) }
 
-    #editor:focus {
-      outline: none;
-      border-color: #4a90e2;
-    }
-
-    .bottomBar {
-      display: flex;
-      justify-content: space-between;
-      margin-top: 10px;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    .bottomBar button {
-      padding: 10px 16px;
-      border: none;
-      border-radius: 8px;
-      background-color: #4a90e2;
-      color: white;
-      cursor: pointer;
-      font-weight: 600;
-    }
-
-    .bottomBar button:hover {
-      background-color: #357abd;
-    }
-
-    #themeToggle {
-      background-color: #222;
-    }
-
-    #backgroundInput {
-      margin-top: 6px;
-    }
-
-    body.dark {
-      background-color: #121212;
-      color: white;
-    }
-
-    body.dark #diaryPage {
-      background-color: #1e1e1e;
-    }
-
-    body.dark #calendar {
-      background-color: #222;
-      border-color: #333;
-    }
-
-    body.dark #editor {
-      background-color: rgba(40,40,40,0.8);
-      color: white;
-    }
-
-  </style>
+  /* responsive */
+  @media (max-width:980px){
+    .appWrap{ flex-direction:column; height:auto }
+    .leftCol{ width:100%; order:2 }
+    .rightCol{ order:1 }
+  }
+</style>
 </head>
 <body>
-
+  <!-- LOGIN (exactly unchanged in structure & IDs) -->
   <div id="login">
     <h1>🔒 My Secret Diary</h1>
     <p>Enter your diary password</p>
@@ -200,214 +115,575 @@
     <button id="loginBtn">Login</button>
   </div>
 
-  <div id="diaryPage">
-    <div id="calendar">
-      <h2>📅 Select Date</h2>
-      <input type="date" id="datePicker">
-    </div>
+  <!-- APP -->
+  <div id="appRoot">
+    <div class="appWrap">
+      <div class="leftCol" aria-hidden="false">
+        <div class="monthHeader">
+          <button id="prevMonth" class="toolIconBtn" title="Previous month">◀</button>
+          <div class="monthLabel" id="monthLabel">Month</div>
+          <button id="nextMonth" class="toolIconBtn" title="Next month">▶</button>
+        </div>
 
-    <div id="editorSection">
-      <h1 id="diaryTitle">My Secret Diary</h1>
+        <div class="calendarGrid" id="calendarGrid">
+          <!-- grid populated by JS -->
+        </div>
 
-      <div id="toolbar">
-        <button id="boldBtn"><b>Bold</b></button>
-        <button id="italicBtn"><i>Italic</i></button>
-        <button id="underlineBtn"><u>Underline</u></button>
-        <button id="highlightBtn" title="Highlight">🖍</button>
-        <label title="Text Color" for="colorPicker">🎨</label>
-        <input type="color" id="colorPicker">
-        <label>🖼️ Background: <input type="file" id="backgroundInput" accept="image/*"></label>
+        <div style="margin-top:12px; width:100%; display:flex; gap:8px; align-items:center; justify-content:space-between">
+          <div style="font-size:13px; color:var(--muted)">Selected: <span id="selectedDate">—</span></div>
+          <button id="goToday" class="toolIconBtn" title="Go to today">Today</button>
+        </div>
+
+        <div class="legend">
+          <div style="display:flex; gap:8px; align-items:center; margin-top:12px"><div style="width:10px;height:10px;border-radius:50%;background:var(--accent);"></div><div>Saved Entry</div></div>
+        </div>
       </div>
 
-      <div id="editor" contenteditable="true" placeholder="Start writing..."></div>
+      <div class="rightCol">
+        <div class="topBar">
+          <div class="titleBlock">
+            <div class="title" id="diaryTitle">My Secret Diary</div>
+            <div class="sub">Encrypted locally • You can edit past & today</div>
+          </div>
 
-      <div class="bottomBar">
-        <button id="saveBtn">💾 Save</button>
-        <button id="renameBtn">✏️ Change Name</button>
-        <button id="changePassBtn">🔒 Change Password</button>
-        <button id="themeToggle">🌙 Theme</button>
+          <div class="topActions">
+            <button id="saveTop" class="squareBtn primary">💾 Save</button>
+            <button id="renameTop" class="squareBtn">✏️ Rename</button>
+            <button id="changePassTop" class="squareBtn">🔒 Change Pass</button>
+            <button id="themeToggleTop" class="squareBtn">Theme</button>
+          </div>
+        </div>
+
+        <div class="toolbar" role="toolbar" aria-label="Formatting toolbar">
+          <button id="btnBold" class="toolTextBtn" title="Bold">B</button>
+          <button id="btnItalic" class="toolTextBtn" title="Italic">I</button>
+          <button id="btnUnderline" class="toolTextBtn" title="Underline">U</button>
+
+          <div style="width:8px"></div>
+
+          <button id="btnHighlight" class="toolIconBtn" title="Highlight">🖍</button>
+
+          <div style="width:8px"></div>
+
+          <div class="palette">
+            <button id="colorIcon" class="toolIconBtn" title="Text color">🎨</button>
+            <div class="palettePopup" id="colorPopup" style="display:none">
+              <!-- swatches filled by JS -->
+            </div>
+          </div>
+
+          <label style="margin-left:8px; font-size:13px; color:var(--muted)">Font</label>
+          <select id="fontSelect" style="padding:8px; border-radius:8px; border:1px solid rgba(0,0,0,0.06)">
+            <option value="Quicksand">Quicksand</option>
+            <option value="Inter">Inter</option>
+            <option value="Georgia">Serif</option>
+            <option value="Courier New">Mono</option>
+          </select>
+
+          <label style="font-size:13px; color:var(--muted)">Size</label>
+          <select id="sizeSelect" style="padding:8px; border-radius:8px; border:1px solid rgba(0,0,0,0.06)">
+            <option value="14px">14</option>
+            <option value="16px" selected>16</option>
+            <option value="18px">18</option>
+            <option value="20px">20</option>
+          </select>
+
+          <label style="margin-left:12px; font-size:13px; color:var(--muted)">Background:</label>
+          <input id="bgInput" type="file" accept="image/*" style="padding:6px; border-radius:8px;" />
+
+        </div>
+
+        <div class="editorWrap" id="editorWrap">
+          <div id="editor" class="editor" contenteditable="true" spellcheck="true" aria-label="Diary editor">
+            <div class="placeholder" style="color:var(--muted)">Start writing your thoughts...</div>
+          </div>
+        </div>
+
+        <div class="bottomRow">
+          <div id="statusText" style="font-size:13px; color:var(--muted)"></div>
+          <div style="display:flex; gap:8px">
+            <button id="saveBottom" class="squareBtn primary">Save</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
-    import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
+<script type="module">
+/* --------------- Full App JS --------------- 
+ - Keeps login UI & behavior unchanged.
+ - Enhances main screen UI, fixes toolbar behavior, color palette, calendar, theme toggle.
+ - Uses AES-GCM client-side encryption for entries.
+ - Reads / writes settings at entries/settings (same mechanics).
+-------------------------------------------- */
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyDRpLl01xtSZ7f0ZbId7zFASUJoem4L69s",
-      authDomain: "my-secret-diary-9b62c.firebaseapp.com",
-      projectId: "my-secret-diary-9b62c",
-      storageBucket: "my-secret-diary-9b62c.firebasestorage.app",
-      messagingSenderId: "139353851381",
-      appId: "1:139353851381:web:3050a47540d36a2243ccbc"
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
+
+// ---------- Firebase config (your provided config) ----------
+const firebaseConfig = {
+  apiKey: "AIzaSyDRpLl01xtSZ7f0ZbId7zFASUJoem4L69s",
+  authDomain: "my-secret-diary-9b62c.firebaseapp.com",
+  projectId: "my-secret-diary-9b62c",
+  storageBucket: "my-secret-diary-9b62c.firebasestorage.app",
+  messagingSenderId: "139353851381",
+  appId: "1:139353851381:web:3050a47540d36a2243ccbc"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// ---------- DOM ----------
+const loginDiv = document.getElementById('login');
+const passwordInput = document.getElementById('passwordInput');
+const loginBtn = document.getElementById('loginBtn');
+
+const appRoot = document.getElementById('appRoot');
+const calendarGrid = document.getElementById('calendarGrid');
+const monthLabel = document.getElementById('monthLabel');
+const prevMonth = document.getElementById('prevMonth');
+const nextMonth = document.getElementById('nextMonth');
+const selectedDateSpan = document.getElementById('selectedDate');
+const goToday = document.getElementById('goToday');
+
+const diaryTitle = document.getElementById('diaryTitle');
+const saveTop = document.getElementById('saveTop');
+const renameTop = document.getElementById('renameTop');
+const changePassTop = document.getElementById('changePassTop');
+const themeToggleTop = document.getElementById('themeToggleTop');
+
+const btnBold = document.getElementById('btnBold');
+const btnItalic = document.getElementById('btnItalic');
+const btnUnderline = document.getElementById('btnUnderline');
+const btnHighlight = document.getElementById('btnHighlight');
+
+const colorIcon = document.getElementById('colorIcon');
+const colorPopup = document.getElementById('colorPopup');
+
+const fontSelect = document.getElementById('fontSelect');
+const sizeSelect = document.getElementById('sizeSelect');
+const bgInput = document.getElementById('bgInput');
+
+const editor = document.getElementById('editor');
+const editorWrap = document.getElementById('editorWrap');
+
+const saveBottom = document.getElementById('saveBottom');
+const statusText = document.getElementById('statusText');
+
+let storedPassword = "53458678";
+let diaryName = "My Secret Diary";
+let currentPassword = null; // password user types at login
+let settingsMeta = { theme:'light', background:null, font:'Quicksand', size:'16px' };
+
+// calendar state
+let calendarYear = (new Date()).getFullYear();
+let calendarMonth = (new Date()).getMonth();
+let selectedDate = null;
+let entriesIndex = {}; // map date->true if saved
+
+// helper: get date in Asia/Kolkata as yyyy-mm-dd
+function getYMDInTimeZone(timeZone='Asia/Kolkata', d=new Date()){
+  // Use Intl to get parts
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone, year:'numeric', month:'2-digit', day:'2-digit' }).formatToParts(d);
+  const obj = {};
+  parts.forEach(p=>obj[p.type]=p.value);
+  return `${obj.year}-${obj.month}-${obj.day}`;
+}
+
+// small util
+const toYMD = d => (new Date(d)).toISOString().slice(0,10);
+
+// ---------- Crypto: PBKDF2 -> AES-GCM per-entry (salt + iv) ----------
+function b64(arr){ return btoa(String.fromCharCode(...arr)); }
+function fromB64(s){ return Uint8Array.from(atob(s), c=>c.charCodeAt(0)); }
+
+async function deriveKey(password, salt) {
+  const enc = new TextEncoder();
+  const base = await crypto.subtle.importKey('raw', enc.encode(password), {name:'PBKDF2'}, false, ['deriveKey']);
+  return crypto.subtle.deriveKey({ name:'PBKDF2', salt, iterations:150000, hash:'SHA-256' }, base, { name:'AES-GCM', length:256 }, false, ['encrypt','decrypt']);
+}
+
+async function encryptPayload(password, payloadObj){
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await deriveKey(password, salt);
+  const enc = new TextEncoder();
+  const data = enc.encode(JSON.stringify(payloadObj));
+  const cipher = await crypto.subtle.encrypt({ name:'AES-GCM', iv }, key, data);
+  return { cipher: b64(new Uint8Array(cipher)), iv: b64(iv), salt: b64(salt) };
+}
+
+async function decryptPayload(password, docData){
+  const iv = fromB64(docData.iv);
+  const salt = fromB64(docData.salt);
+  const key = await deriveKey(password, salt);
+  const cipherBuf = fromB64(docData.cipher);
+  const plain = await crypto.subtle.decrypt({ name:'AES-GCM', iv }, key, cipherBuf);
+  const dec = new TextDecoder();
+  return JSON.parse(dec.decode(plain));
+}
+
+// ---------- Settings load (same location as your previous scripts: entries/settings) ----------
+async function loadSettings(){
+  try{
+    const sRef = doc(db, 'entries', 'settings');
+    const snap = await getDoc(sRef);
+    if(snap.exists()){
+      const data = snap.data();
+      // previous scripts stored password plaintext in settings; preserve that behavior
+      storedPassword = data.password || storedPassword;
+      diaryName = data.name || diaryName;
+      if(data.bg) settingsMeta.background = data.bg;
+      diaryTitle.textContent = diaryName;
+      applySettingsMeta();
+    } else {
+      // create default
+      await setDoc(sRef, { password: storedPassword, name: diaryName, bg: settingsMeta.background || "" });
+    }
+  } catch(e){ console.warn('loadSettings error', e) }
+}
+
+// ---------- Calendar rendering / index ----------
+async function loadEntriesIndexForMonth(year, month){
+  entriesIndex = {};
+  const days = new Date(year, month+1, 0).getDate();
+  const promises = [];
+  for(let d=1; d<=days; d++){
+    const key = toYMD(new Date(year, month, d));
+    promises.push((async ()=>{
+      try{
+        const snap = await getDoc(doc(db,'entries', key));
+        if(snap.exists()) entriesIndex[key] = true;
+      }catch(e){}
+    })());
+  }
+  await Promise.all(promises);
+}
+
+function renderCalendar(year, month){
+  calendarYear = year; calendarMonth = month;
+  const first = new Date(year, month, 1);
+  const startWeekday = first.getDay();
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  monthLabel.textContent = first.toLocaleString(undefined,{month:'long', year:'numeric'});
+  calendarGrid.innerHTML = '';
+  // weekdays header
+  // fill empty spots
+  for(let i=0;i<startWeekday;i++){ const cell = document.createElement('div'); cell.className='dayCell disabled'; calendarGrid.appendChild(cell); }
+  for(let d=1; d<=daysInMonth; d++){
+    const dt = new Date(year, month, d);
+    const key = toYMD(dt);
+    const cell = document.createElement('div');
+    cell.className='dayCell';
+    cell.textContent = d;
+    const dot = document.createElement('div'); dot.className='dot';
+    if(entriesIndex[key]) cell.classList.add('hasEntry');
+    cell.appendChild(dot);
+    const todayKey = getYMDInTimeZone('Asia/Kolkata', new Date());
+    if(key === todayKey) cell.classList.add('today');
+    cell.onclick = async ()=> {
+      await selectDate(key, dt);
     };
+    if(key === selectedDate) cell.classList.add('selected');
+    calendarGrid.appendChild(cell);
+  }
+}
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+// selectDate
+async function selectDate(key, dt){
+  selectedDate = key;
+  selectedDateSpan.textContent = new Date(key).toLocaleDateString(undefined, { timeZone:'Asia/Kolkata' });
+  // clear selected classes and mark new one
+  calendarGrid.querySelectorAll('.dayCell').forEach(c=>c.classList.remove('selected'));
+  // find cell matching day number & set selected
+  calendarGrid.querySelectorAll('.dayCell').forEach(n=>{
+    if(n.textContent && n.textContent.trim() == dt.getDate()) n.classList.add('selected');
+  });
+  await loadEntryForDate(key);
+  updateEditModeForDate(key);
+}
 
-    // Elements
-    const loginDiv = document.getElementById("login");
-    const diaryPage = document.getElementById("diaryPage");
-    const passwordInput = document.getElementById("passwordInput");
-    const loginBtn = document.getElementById("loginBtn");
-    const datePicker = document.getElementById("datePicker");
-    const editor = document.getElementById("editor");
-    const saveBtn = document.getElementById("saveBtn");
-    const renameBtn = document.getElementById("renameBtn");
-    const changePassBtn = document.getElementById("changePassBtn");
-    const diaryTitle = document.getElementById("diaryTitle");
-    const themeToggle = document.getElementById("themeToggle");
-    const backgroundInput = document.getElementById("backgroundInput");
+// edit mode (prevent future saves)
+function updateEditModeForDate(key){
+  const dd = new Date(key + 'T00:00:00');
+  const todayStr = getYMDInTimeZone('Asia/Kolkata', new Date());
+  const today = new Date(todayStr + 'T00:00:00');
+  if(dd > today){
+    editor.setAttribute('contenteditable','false');
+    saveTop.disabled = saveBottom.disabled = true;
+  } else {
+    editor.setAttribute('contenteditable','true');
+    saveTop.disabled = saveBottom.disabled = false;
+  }
+}
 
-    let currentPassword = "53458678";
-    let diaryName = "My Secret Diary";
-    let backgroundImage = "";
-    let encryptionKey = null;
+// ---------- Editor toolbar behavior ----------
+// use execCommand for simplicity (works widely)
+function exec(command, value=null){
+  document.execCommand(command, false, value);
+  editor.focus();
+  updateToolbarStates();
+}
 
-    // Encryption helpers
-    async function getKey() {
-      if (!encryptionKey) {
-        encryptionKey = await crypto.subtle.generateKey(
-          { name: "AES-GCM", length: 256 },
-          true,
-          ["encrypt", "decrypt"]
-        );
-      }
-      return encryptionKey;
+function updateToolbarStates(){
+  try{
+    btnBold.classList.toggle('active', document.queryCommandState('bold'));
+    btnItalic.classList.toggle('active', document.queryCommandState('italic'));
+    btnUnderline.classList.toggle('active', document.queryCommandState('underline'));
+  }catch(e){}
+}
+
+btnBold.onclick = ()=> exec('bold');
+btnItalic.onclick = ()=> exec('italic');
+btnUnderline.onclick = ()=> exec('underline');
+btnHighlight.onclick = ()=> { try{ exec('hiliteColor', '#fff59b'); } catch(e){ exec('backColor', '#fff59b'); } };
+
+const paletteColors = ['#000000','#333333','#555555','#8B5CF6','#2563EB','#10B981','#F59E0B','#EF4444','#FFFFFF','#FFD3B6','#BDE0FE','#FFD6F0'];
+function createColorSwatches(){
+  colorPopup.innerHTML = '';
+  paletteColors.forEach(c=>{
+    const s = document.createElement('div');
+    s.className = 'sw';
+    s.style.background = c;
+    s.title = c;
+    s.onclick = ()=> { exec('foreColor', c); colorPopup.style.display='none'; };
+    colorPopup.appendChild(s);
+  });
+}
+createColorSwatches();
+
+colorIcon.onclick = (e)=>{
+  colorPopup.style.display = colorPopup.style.display === 'block' ? 'none' : 'block';
+};
+
+// close color popup on outside click
+document.addEventListener('click', (e)=>{
+  if(!colorIcon.contains(e.target) && !colorPopup.contains(e.target)) colorPopup.style.display = 'none';
+});
+
+// font & size
+fontSelect.onchange = ()=> editor.style.fontFamily = fontSelect.value;
+sizeSelect.onchange = ()=> editor.style.fontSize = sizeSelect.value;
+
+// editor placeholder
+function ensurePlaceholder(){
+  if(!editor.innerText.trim()){
+    editor.innerHTML = '<div class="placeholder" style="color:var(--muted)">Start writing your thoughts...</div>';
+  } else {
+    const ph = editor.querySelector('.placeholder');
+    if(ph) ph.remove();
+  }
+}
+editor.addEventListener('input', ()=> { ensurePlaceholder(); updateToolbarStates(); });
+editor.addEventListener('mouseup', updateToolbarStates);
+editor.addEventListener('keyup', updateToolbarStates);
+
+// ---------- Encryption & entry load/save ----------
+
+// encrypt/decrypt wrappers using AES-GCM + PBKDF2 (same as earlier more secure functions)
+async function encryptEntry(password, payload){
+  // payload: { html, meta, diaryName, savedAt }
+  return await encryptPayload(password, payload);
+}
+async function decryptEntry(password, docData){
+  return await decryptPayload(password, docData);
+}
+
+// load a specific date
+async function loadEntryForDate(key){
+  statusText.textContent = 'Loading...';
+  try{
+    const snap = await getDoc(doc(db,'entries', key));
+    if(!snap.exists()){
+      editor.innerHTML = '<div class="placeholder" style="color:var(--muted)">Start writing your thoughts...</div>';
+      statusText.textContent = 'No entry';
+      return;
     }
-
-    async function encryptData(data) {
-      const enc = new TextEncoder();
-      const key = await getKey();
-      const iv = crypto.getRandomValues(new Uint8Array(12));
-      const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, enc.encode(data));
-      return { iv: Array.from(iv), data: Array.from(new Uint8Array(encrypted)) };
-    }
-
-    async function decryptData(encrypted) {
-      const dec = new TextDecoder();
-      const key = await getKey();
-      const iv = new Uint8Array(encrypted.iv);
-      const data = new Uint8Array(encrypted.data);
-      const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, data);
-      return dec.decode(decrypted);
-    }
-
-    async function loadSettings() {
-      const settingsDoc = await getDoc(doc(db, "entries", "settings"));
-      if (settingsDoc.exists()) {
-        const data = settingsDoc.data();
-        currentPassword = data.password || currentPassword;
-        diaryName = data.name || diaryName;
-        backgroundImage = data.background || "";
+    const data = snap.data();
+    if(data.cipher && data.iv && data.salt){
+      try{
+        const payload = await decryptEntry(currentPassword, data);
+        editor.innerHTML = payload.html || '';
+        settingsMeta = payload.meta || settingsMeta;
+        diaryName = payload.diaryName || diaryName;
         diaryTitle.textContent = diaryName;
-        if (backgroundImage) {
-          document.getElementById("editorSection").style.backgroundImage = `url(${backgroundImage})`;
-        }
-      } else {
-        await setDoc(doc(db, "entries", "settings"), {
-          password: currentPassword,
-          name: diaryName,
-          background: ""
-        });
+        applySettingsMeta();
+        statusText.textContent = 'Loaded (decrypted)';
+      } catch(e){
+        editor.innerHTML = '<div class="placeholder" style="color:var(--muted)">Unable to decrypt this entry (wrong password).</div>';
+        statusText.textContent = 'Decrypt failed';
       }
+    } else if(data.text){
+      // legacy plaintext
+      editor.innerHTML = data.text || '';
+      statusText.textContent = 'Loaded (legacy)';
+    } else {
+      editor.innerHTML = '<div class="placeholder" style="color:var(--muted)">Empty</div>';
+      statusText.textContent = 'Empty';
     }
+  } catch(e){ console.error('loadEntryForDate', e); statusText.textContent = 'Load error'; }
+}
 
-    await loadSettings();
+// save entry
+async function saveEntryForDate(key){
+  const dd = new Date(key + 'T00:00:00');
+  const todayStr = getYMDInTimeZone('Asia/Kolkata', new Date());
+  const today = new Date(todayStr + 'T00:00:00');
+  if(dd > today){ alert('Cannot save future entries'); return; }
+  ensurePlaceholder();
+  const html = editor.innerHTML;
+  const payload = { html, meta: settingsMeta, diaryName, savedAt: new Date().toISOString() };
+  statusText.textContent = 'Encrypting & saving...';
+  try{
+    const enc = await encryptEntry(currentPassword, payload);
+    await setDoc(doc(db,'entries', key), { ...enc, savedAt: serverTimestamp() });
+    entriesIndex[key] = true;
+    statusText.textContent = 'Saved (encrypted)';
+    // re-render calendar dot
+    await loadEntriesIndexForMonth(calendarYear, calendarMonth);
+    renderCalendar(calendarYear, calendarMonth);
+    alert('Saved!');
+  } catch(e){ console.error('saveEntryForDate', e); statusText.textContent = 'Save failed'; alert('Save failed'); }
+}
 
-    loginBtn.onclick = async () => {
-      if (passwordInput.value === currentPassword) {
-        loginDiv.style.display = "none";
-        diaryPage.style.display = "flex";
-        const now = new Date();
-        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-        datePicker.value = now.toISOString().slice(0,10);
-        loadEntry();
-      } else {
-        alert("Wrong password!");
-      }
-    };
+// ---------- Settings apply (theme/background/font/size) ----------
+function applySettingsMeta(){
+  document.body.classList.toggle('dark', settingsMeta.theme === 'dark');
+  if(settingsMeta.background){
+    document.querySelector('.rightCol').style.backgroundImage = `url("${settingsMeta.background}")`;
+    document.querySelector('.rightCol').style.backgroundSize = 'cover';
+    document.querySelector('.rightCol').style.backgroundPosition = 'center';
+  } else {
+    document.querySelector('.rightCol').style.backgroundImage = '';
+  }
+  if(settingsMeta.font) fontSelect.value = settingsMeta.font;
+  if(settingsMeta.size) sizeSelect.value = settingsMeta.size;
+  editor.style.fontFamily = fontSelect.value;
+  editor.style.fontSize = sizeSelect.value;
+}
 
-    async function loadEntry() {
-      const date = datePicker.value;
-      const entryDoc = await getDoc(doc(db, "entries", date));
-      if (entryDoc.exists()) {
-        const encrypted = entryDoc.data().text;
-        if (encrypted && encrypted.iv) {
-          editor.innerHTML = await decryptData(encrypted);
-        } else {
-          editor.innerHTML = entryDoc.data().text;
-        }
-      } else editor.innerHTML = "";
-    }
+// save settings doc (store name + password + bg) — keep same mechanics as before
+async function saveSettingsDoc(){
+  try{
+    await setDoc(doc(db,'entries','settings'), { password: storedPassword, name: diaryName, bg: settingsMeta.background || "" });
+  } catch(e){ console.error('saveSettingsDoc', e) }
+}
 
-    datePicker.onchange = () => {
-      const today = new Date().toISOString().slice(0,10);
-      if (datePicker.value > today) {
-        alert("You can only edit today's or past entries!");
-        const now = new Date();
-        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-        datePicker.value = now.toISOString().slice(0,10);
-      }
-      loadEntry();
-    };
+// ---------- UI event wiring / behavior ----------
 
-    saveBtn.onclick = async () => {
-      const date = datePicker.value;
-      const text = editor.innerHTML;
-      const encrypted = await encryptData(text);
-      await setDoc(doc(db, "entries", date), { text: encrypted });
-      alert("Saved securely!");
-    };
+// load settings on startup
+await loadSettings();
 
-    renameBtn.onclick = async () => {
-      const newName = prompt("Enter new diary name:");
-      if (newName) {
-        diaryName = newName;
-        diaryTitle.textContent = newName;
-        await setDoc(doc(db, "entries", "settings"), { password: currentPassword, name: diaryName, background: backgroundImage });
-      }
-    };
+// Init calendar & selection using India timezone
+(async ()=>{
+  const todayStr = getYMDInTimeZone('Asia/Kolkata', new Date());
+  const today = new Date(todayStr + 'T00:00:00');
+  calendarYear = today.getFullYear();
+  calendarMonth = today.getMonth();
+  selectedDate = todayStr;
+  selectedDateSpan.textContent = new Date(selectedDate).toLocaleDateString(undefined,{timeZone:'Asia/Kolkata'});
+  await loadEntriesIndexForMonth(calendarYear, calendarMonth);
+  renderCalendar(calendarYear, calendarMonth);
+  await selectDate(selectedDate, new Date(selectedDate));
+})();
 
-    changePassBtn.onclick = async () => {
-      const newPass = prompt("Enter new password:");
-      if (newPass) {
-        currentPassword = newPass;
-        await setDoc(doc(db, "entries", "settings"), { password: currentPassword, name: diaryName, background: backgroundImage });
-      }
-    };
+// login
+loginBtn.onclick = async ()=>{
+  // reload settings to get latest storedPassword
+  await loadSettings();
+  if(passwordInput.value === storedPassword){
+    currentPassword = passwordInput.value;
+    // hide login, show app (mechanics same as earlier)
+    loginDiv.style.display = 'none';
+    appRoot.style.display = 'block';
+    // ensure UI applied
+    applySettingsMeta();
+    // re-open selected
+    await selectDate(selectedDate, new Date(selectedDate));
+  } else {
+    alert('Wrong password!');
+  }
+};
 
-    // Toolbar logic
-    const boldBtn = document.getElementById("boldBtn");
-    const italicBtn = document.getElementById("italicBtn");
-    const underlineBtn = document.getElementById("underlineBtn");
-    const highlightBtn = document.getElementById("highlightBtn");
-    const colorPicker = document.getElementById("colorPicker");
+// prev/next month
+prevMonth.onclick = async ()=>{
+  calendarMonth--; if(calendarMonth<0){ calendarMonth=11; calendarYear--; }
+  await loadEntriesIndexForMonth(calendarYear, calendarMonth);
+  renderCalendar(calendarYear, calendarMonth);
+};
+nextMonth.onclick = async ()=>{
+  calendarMonth++; if(calendarMonth>11){ calendarMonth=0; calendarYear++; }
+  await loadEntriesIndexForMonth(calendarYear, calendarMonth);
+  renderCalendar(calendarYear, calendarMonth);
+};
+goToday.onclick = async ()=>{
+  const todayStr = getYMDInTimeZone('Asia/Kolkata', new Date());
+  calendarYear = new Date(todayStr).getFullYear();
+  calendarMonth = new Date(todayStr).getMonth();
+  await loadEntriesIndexForMonth(calendarYear, calendarMonth);
+  renderCalendar(calendarYear, calendarMonth);
+  await selectDate(todayStr, new Date(todayStr));
+};
 
-    boldBtn.onclick = () => document.execCommand('bold');
-    italicBtn.onclick = () => document.execCommand('italic');
-    underlineBtn.onclick = () => document.execCommand('underline');
-    highlightBtn.onclick = () => document.execCommand('hiliteColor', false, 'yellow');
-    colorPicker.onchange = () => document.execCommand('foreColor', false, colorPicker.value);
+// Save handlers (top & bottom)
+saveTop.onclick = saveBottom.onclick = async ()=>{
+  if(!selectedDate) return alert('No date selected');
+  await saveEntryForDate(selectedDate);
+};
 
-    themeToggle.onclick = () => {
-      document.body.classList.toggle('dark');
-    };
+// Change Name button
+renameTop.onclick = async ()=>{
+  const newName = prompt('Enter new diary name:');
+  if(!newName) return;
+  diaryName = newName;
+  diaryTitle.textContent = diaryName;
+  await saveSettingsDoc();
+  alert('Diary renamed.');
+};
 
-    backgroundInput.onchange = async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = async (ev) => {
-        const url = ev.target.result;
-        backgroundImage = url;
-        document.getElementById("editorSection").style.backgroundImage = `url(${url})`;
-        await setDoc(doc(db, "entries", "settings"), { password: currentPassword, name: diaryName, background: backgroundImage });
-      };
-      reader.readAsDataURL(file);
-    };
+// Change Password button (keeps same mechanics: storedPassword updated in settings doc)
+changePassTop.onclick = async ()=>{
+  const newPass = prompt('Enter new password:');
+  if(!newPass) return;
+  storedPassword = newPass;
+  await saveSettingsDoc();
+  alert('Password changed for settings. (Existing entries remain encrypted with previous password until re-encrypted.)');
+};
 
-  </script>
+// Theme toggle (no moon icon): cycles light/dark; saved in settings meta for entries (but settings doc still stores bg/name/password only)
+themeToggleTop.onclick = async ()=>{
+  settingsMeta.theme = settingsMeta.theme === 'dark' ? 'light' : 'dark';
+  applySettingsMeta();
+  // Also save settings as part of entries/settings? We'll persist bg/name/password only to match earlier mechanics
+  // Save note: entries settings doc structure remains (password,name,bg) to preserve previous logic.
+  alert('Theme toggled');
+};
+
+// background upload (file from PC/mobile) - stores data URL in settingsMeta.background and saves in settings doc
+bgInput.onchange = async (e)=>{
+  const f = e.target.files[0];
+  if(!f) return;
+  const reader = new FileReader();
+  reader.onload = async (ev)=>{
+    settingsMeta.background = ev.target.result; // data URL
+    applySettingsMeta();
+    // Persist background in settings doc (we keep previous scheme: stored in entries/settings.bg)
+    settingsMeta.background = settingsMeta.background;
+    try { await setDoc(doc(db,'entries','settings'), { password: storedPassword, name: diaryName, bg: settingsMeta.background || "" }); } catch(e){ console.error(e); }
+    alert('Background applied & saved.');
+  };
+  reader.readAsDataURL(f);
+};
+
+// keyboard shortcuts for bold/italic/underline
+document.addEventListener('keydown', (e)=>{
+  if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='b'){ e.preventDefault(); exec('bold') }
+  if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='i'){ e.preventDefault(); exec('italic') }
+  if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='u'){ e.preventDefault(); exec('underline') }
+});
+
+// initial placeholder
+ensurePlaceholder();
+
+</script>
 </body>
 </html>
