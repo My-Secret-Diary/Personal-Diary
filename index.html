@@ -84,7 +84,8 @@ display=swap" rel="stylesheet">
 
   .colorPreview{ width:28px; height:20px; border-radius:6px; border:1px solid rgba(0,0,0,0.06); display:inline-block; vertical-align:middle; margin-left:6px }
 
-  .editorWrap{ padding:12px; border-radius:12px; border:1px solid rgba(0,0,0,0.05); min-height:480px; overflow:auto; background: rgba(255,255,255,0.85) }
+  /* NOTE: background changed to solid white to remove any "blur/transparency" effect per request */
+  .editorWrap{ padding:12px; border-radius:12px; border:1px solid rgba(0,0,0,0.05); min-height:480px; overflow:auto; background: #ffffff; }
   .editor{ min-height:420px; outline:none; font-size:16px; color:inherit; background:transparent; padding:12px; }
 
   /* Save button fixed in viewport so it won't move when editor content changes */
@@ -229,6 +230,7 @@ display=swap" rel="stylesheet">
 /* FULL working script with fixes for:
    1) highlight toggling (caret normalization so toggling off prevents future typing from inheriting highlight)
    2) save button staying fixed in bottom-right (doesn't move when editor grows)
+   NOTE: background/blur removed for editor area only (editorWrap uses solid white).
 */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
