@@ -1,600 +1,347 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>My Secret Diary</title>
-  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&family=Patrick+Hand&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
   <style>
-    :root{
-      --accent:#1f6feb;
-      --accent-active:#0b63d6;
-      --muted:#6b7280;
-      --bg:#f6f9fc;
-      --card:#ffffff;
-      --paper:#fffef6;
-      --shadow: 0 10px 30px rgba(16,24,40,0.06);
+    :root {
+      --bg: #f4f7fc;
+      --text: #222;
+      --card-bg: #ffffff;
+      --toolbar-bg: #e8ecf3;
+      --button-bg: #1f6feb;
+      --button-hover: #0b63d6;
+      --shadow: 0 10px 40px rgba(16,24,40,0.12);
     }
-    *{box-sizing:border-box}
-    body{
-      margin:0;
-      min-height:100vh;
-      background: linear-gradient(180deg, #fbfdff, var(--bg));
-      font-family: Quicksand, Arial, sans-serif;
-      color:#111;
-      display:flex;
-      align-items:flex-start;
-      justify-content:center;
-      padding:36px 18px;
-    }
-    .container{width:100%;max-width:1120px}
-
-    /* LOGIN - redesigned */
-    #login{
-      margin:30px auto;
-      background: linear-gradient(180deg,#ffffff,#fbfbff);
-      border-radius:18px;
-      box-shadow:var(--shadow);
-      width:820px;
-      max-width:95%;
-      padding:28px 36px;
-      display:flex;
-      gap:24px;
-      align-items:center;
-    }
-    .login-left{flex:1}
-    .login-right{width:340px}
-    .brand-large{display:flex;align-items:center;gap:14px}
-    .logo-large{width:68px;height:68px;border-radius:14px;background:linear-gradient(135deg,#fff,#f2efe6);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 30px rgba(16,24,40,0.06)}
-    .logo-large span{font-weight:700;color:var(--accent);font-size:26px}
-    #login h1{margin:0;font-size:22px}
-    #login p{margin:6px 0 0;color:var(--muted)}
-    #login small{display:block;margin-top:8px;color:var(--muted);font-size:13px}
-
-    #login input[type="password"]{
-      width:100%;
-      padding:12px 14px;border-radius:12px;border:1px solid #e6e9ef;font-size:15px;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
-    }
-    #login button{
-      width:100%;
-      margin-top:10px;
-      padding:12px;border-radius:12px;border:none;background:var(--accent);color:white;font-weight:700;cursor:pointer;
-      box-shadow:0 6px 18px rgba(31,111,235,0.12);
+    body {
+      font-family: 'Quicksand', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-size: cover;
+      background-position: center;
+      transition: 0.3s;
     }
 
-    /* DIARY layout */
-    #diaryWrap{display:none;margin-top:6px}
-    .diaryHeader{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
-    .brand{display:flex;align-items:center;gap:12px}
-    .logo{width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,#fff,#f2efe6);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow)}
-    .logo span{font-weight:700;color:var(--accent);font-size:20px}
-    h1.title{margin:0;font-size:20px}
-    .muted{color:var(--muted);font-size:13px}
+    #login, #diary {
+      background: var(--card-bg);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+      padding: 50px 60px;
+      width: 850px;
+      max-width: 95%;
+      transition: 0.3s;
+    }
 
-    .top-right-actions{display:flex;gap:10px;align-items:center}
-    .controls-top{padding:10px 12px;border-radius:12px;border:1px solid rgba(0,0,0,0.06);background:#fff;cursor:pointer}
-    .controls-top.primary{background:var(--accent);color:#fff;border:none}
+    /* Center login properly */
+    #login {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      width: 400px;
+      padding: 50px 40px;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      animation: fadeIn 0.5s ease-out;
+    }
 
-    .layout{display:grid;grid-template-columns:320px 1fr;gap:18px;align-items:start}
-    .panel{background:var(--card);border-radius:12px;padding:16px;box-shadow:var(--shadow)}
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translate(-50%, -40%); }
+      to { opacity: 1; transform: translate(-50%, -50%); }
+    }
 
-    /* calendar */
-    .month-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-    .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
-    .dayname{font-size:12px;color:var(--muted);text-align:center}
-    .date{min-height:72px;border-radius:10px;padding:8px;background:linear-gradient(180deg,#fff,#fbfdff);border:1px solid #f0f3f7;cursor:pointer;transition:all .12s}
-    .date:hover{transform:translateY(-4px)}
-    .date.today{outline:2px solid #fde68a}
-    .date.has{box-shadow:inset 0 -4px 0 rgba(31,111,235,0.06)}
-    .date .num{font-weight:700}
-    .date .preview{font-size:12px;color:var(--muted);margin-top:6px;max-height:36px;overflow:hidden}
+    h1 {
+      color: var(--text);
+      margin-bottom: 20px;
+    }
 
-    /* editor */
-    .editor-wrap{display:flex;flex-direction:column}
-    .editor-meta{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
-    .controls-left{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-    .format-btn, .color-btn{padding:8px;border-radius:8px;border:1px solid #e6e9ef;background:#f7f8fa;cursor:pointer;min-width:44px;display:flex;align-items:center;justify-content:center}
-    .format-btn.active{background:var(--accent);color:white;border-color:var(--accent-active);box-shadow:0 6px 18px rgba(31,111,235,0.08)}
-    .editor{border-radius:12px;padding:18px;background:var(--paper);min-height:420px;border:1px solid #efe9d6;overflow:auto}
-    .editor[contenteditable]{outline:none;font-family:'Patrick Hand', Georgia, serif;font-size:18px;line-height:1.6;color:#111}
+    input {
+      font-family: inherit;
+      font-size: 17px;
+      padding: 14px 18px;
+      border-radius: 12px;
+      border: 1px solid #ccc;
+      outline: none;
+      width: 100%;
+      margin-bottom: 18px;
+      box-sizing: border-box;
+      text-align: center;
+      background: #f9fafb;
+      transition: all 0.2s ease;
+    }
+    input:focus {
+      border-color: var(--button-bg);
+      box-shadow: 0 0 0 3px rgba(31,111,235,0.15);
+      background: white;
+    }
 
-    .bottom-actions{display:flex;justify-content:space-between;align-items:center;margin-top:12px;gap:10px}
-    .right-actions{margin-left:auto;display:flex;gap:8px}
-    .btn{padding:10px 14px;border-radius:10px;border:none;background:var(--accent);color:#fff;cursor:pointer}
-    .btn.ghost{background:transparent;color:var(--accent);border:1px solid rgba(31,111,235,0.12)}
-    .btn.warn{background:#ef5350}
+    button {
+      font-family: inherit;
+      font-size: 16px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: none;
+      background: var(--button-bg);
+      color: white;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    button:hover { background: var(--button-hover); transform: translateY(-1px); }
 
-    .theme-toggle{padding:8px;border-radius:8px;border:1px solid #ddd;background:#fff}
+    #toolbar button {
+      background: var(--toolbar-bg);
+      color: var(--text);
+      border: 1px solid #ccc;
+      padding: 8px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
 
-    @media (max-width:920px){
-      .layout{grid-template-columns:1fr}
-      #login{flex-direction:column;gap:12px}
-      .login-right{width:100%}
-      #login input, #login button{width:100%}
+    #toolbar button.active {
+      background: var(--button-bg);
+      color: #fff;
+      border: 1px solid var(--button-hover);
+    }
+
+    #editor {
+      border: 1px solid #ccc;
+      border-radius: 12px;
+      padding: 15px;
+      background: #fffef6;
+      height: 400px;
+      overflow-y: auto;
+      font-size: 16px;
+      line-height: 1.5;
+      outline: none;
+    }
+
+    #topButtons {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    #actionButtons {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 15px;
+    }
+
+    #colorPicker {
+      display: none;
+      position: absolute;
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    #themeToggle, #bgUploadLabel {
+      cursor: pointer;
+      background: var(--toolbar-bg);
+      border: 1px solid #ccc;
+      padding: 8px 10px;
+      border-radius: 6px;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <!-- LOGIN (improved style) -->
-    <div id="login">
-      <div class="login-left">
-        <div class="brand-large">
-          <div class="logo-large"><span>D</span></div>
-          <div>
-            <h1>My Secret Diary</h1>
-            <p class="muted">A private, encrypted diary — open with your password.</p>
-          </div>
-        </div>
-        <small>Keep your password secret — this diary stores encrypted entries in the cloud.</small>
-      </div>
-
-      <div class="login-right">
-        <p style="margin:0 0 8px;font-weight:600">Enter diary password</p>
-        <!-- no default password shown anywhere, placeholder only -->
-        <input type="password" id="passwordInput" placeholder="Password" aria-label="Diary password">
-        <button id="loginBtn">Open Diary</button>
-      </div>
-    </div>
-
-    <!-- DIARY -->
-    <div id="diaryWrap">
-      <div class="diaryHeader">
-        <div class="brand">
-          <div class="logo"><span>D</span></div>
-          <div>
-            <h1 class="title" id="diaryTitle">My Secret Diary</h1>
-            <div class="muted">Private — synced & encrypted</div>
-          </div>
-        </div>
-
-        <div class="top-right-actions">
-          <label class="bg-upload">
-            <input type="file" id="bgUpload" accept="image/*" style="display:none">
-            <button class="controls-top" id="bgBtn" title="Upload background">Background</button>
-          </label>
-
-          <select id="themeSelect" class="theme-toggle" title="Theme">
-            <option value="light">Light</option>
-            <option value="dark">Dark</option>
-          </select>
-
-          <div style="display:flex;gap:8px">
-            <button id="renameBtnTop" class="controls-top" title="Rename diary">Rename</button>
-            <button id="changePassBtnTop" class="controls-top" title="Change password">Change password</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="layout">
-        <!-- Calendar -->
-        <div class="panel">
-          <div class="month-head">
-            <h3 id="monthLabel">Month</h3>
-            <div>
-              <button id="prevMonth" class="controls-top">◀</button>
-              <button id="nextMonth" class="controls-top">▶</button>
-            </div>
-          </div>
-
-          <div class="cal-grid" id="calNames">
-            <div class="dayname">Sun</div><div class="dayname">Mon</div><div class="dayname">Tue</div><div class="dayname">Wed</div><div class="dayname">Thu</div><div class="dayname">Fri</div><div class="dayname">Sat</div>
-          </div>
-
-          <div class="cal-grid" id="calGrid" style="margin-top:10px"></div>
-          <div style="margin-top:10px" class="muted">Click a date to open. Future dates are read-only.</div>
-        </div>
-
-        <!-- Editor -->
-        <div class="panel editor-wrap">
-          <div class="editor-meta">
-            <div class="controls-left">
-              <div style="display:flex;gap:8px;align-items:center">
-                <button class="format-btn" data-cmd="bold" id="btnBold" title="Bold">B</button>
-                <button class="format-btn" data-cmd="italic" id="btnItalic" title="Italic">I</button>
-                <button class="format-btn" data-cmd="underline" id="btnUnderline" title="Underline">U</button>
-                <button class="format-btn" data-cmd="strikeThrough" id="btnStrike" title="Strike">S</button>
-
-                <button class="color-btn" id="highlightBtn" title="Highlight">🖍</button>
-                <button class="color-btn" id="colorBtn" title="Text color">🎨</button>
-                <input type="color" id="colorPicker" style="display:none">
-              </div>
-
-              <div style="margin-left:12px">
-                <div class="muted">Selected date: <span id="selectedDate">—</span></div>
-              </div>
-            </div>
-
-            <div>
-              <button id="prevDay" class="controls-top">Prev</button>
-              <button id="nextDay" class="controls-top">Next</button>
-            </div>
-          </div>
-
-          <div contenteditable="true" id="editor" class="editor" spellcheck="true" role="textbox" aria-label="Diary editor"></div>
-
-          <div class="bottom-actions">
-            <div class="muted" id="statusText">Not saved</div>
-            <div class="right-actions">
-              <button id="saveBtn" class="btn">💾 Save</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+  <div id="login">
+    <h1>🔒 My Secret Diary</h1>
+    <p>Enter your password</p>
+    <input type="password" id="passwordInput" placeholder="Password">
+    <button id="loginBtn">Open Diary</button>
   </div>
 
-<script type="module">
-/* ===== FIREBASE ===== */
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
-import {
-  getFirestore, doc, getDoc, setDoc, collection, getDocs
-} from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
+  <div id="diary" style="display:none;">
+    <div id="topButtons">
+      <div>
+        <button id="renameBtn" style="background-color:#6c6;">Rename Diary</button>
+        <button id="changePassBtn" style="background-color:#f66;">Change Password</button>
+      </div>
+      <div>
+        <button id="themeToggle">🌗 Theme</button>
+        <label id="bgUploadLabel">🖼 Background
+          <input type="file" id="bgUpload" style="display:none;" accept="image/*">
+        </label>
+      </div>
+    </div>
 
-/* your firebase config (kept as provided) */
-const firebaseConfig = {
-  apiKey: "AIzaSyDRpLl01xtSZ7f0ZbId7zFASUJoem4L69s",
-  authDomain: "my-secret-diary-9b62c.firebaseapp.com",
-  projectId: "my-secret-diary-9b62c",
-  storageBucket: "my-secret-diary-9b62c.firebasestorage.app",
-  messagingSenderId: "139353851381",
-  appId: "1:139353851381:web:3050a47540d36a2243ccbc"
-};
+    <h1 id="diaryTitle">My Secret Diary</h1>
+    <div id="calendar">
+      <input type="date" id="datePicker" />
+    </div>
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+    <div id="toolbar">
+      <button onclick="execCmd('bold', this)"><b>B</b></button>
+      <button onclick="execCmd('italic', this)"><i>I</i></button>
+      <button onclick="execCmd('underline', this)"><u>U</u></button>
+      <button onclick="execCmd('strikeThrough', this)">S</button>
+      <button onclick="highlight(this)">🖍 Highlight</button>
+      <button id="colorBtn">🎨 Color</button>
+    </div>
 
-/* ===== DOM ===== */
-const loginDiv = document.getElementById('login');
-const diaryWrap = document.getElementById('diaryWrap');
-const passwordInput = document.getElementById('passwordInput');
-const loginBtn = document.getElementById('loginBtn');
-const diaryTitle = document.getElementById('diaryTitle');
+    <div id="editor" contenteditable="true"></div>
+    <div id="actionButtons">
+      <button id="saveBtn">💾 Save</button>
+    </div>
 
-const calGrid = document.getElementById('calGrid');
-const monthLabel = document.getElementById('monthLabel');
+    <div id="colorPicker"></div>
+  </div>
 
-const editor = document.getElementById('editor');
-const selectedDateLabel = document.getElementById('selectedDate');
-const saveBtn = document.getElementById('saveBtn');
-const statusText = document.getElementById('statusText');
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
+    import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
 
-const btnBold = document.getElementById('btnBold');
-const btnItalic = document.getElementById('btnItalic');
-const btnUnderline = document.getElementById('btnUnderline');
-const btnStrike = document.getElementById('btnStrike');
-const highlightBtn = document.getElementById('highlightBtn');
-const colorBtn = document.getElementById('colorBtn');
-const colorPicker = document.getElementById('colorPicker');
+    const firebaseConfig = {
+      apiKey: "AIzaSyDRpLl01xtSZ7f0ZbId7zFASUJoem4L69s",
+      authDomain: "my-secret-diary-9b62c.firebaseapp.com",
+      projectId: "my-secret-diary-9b62c",
+      storageBucket: "my-secret-diary-9b62c.firebasestorage.app",
+      messagingSenderId: "139353851381",
+      appId: "1:139353851381:web:3050a47540d36a2243ccbc"
+    };
 
-const renameBtnTop = document.getElementById('renameBtnTop');
-const changePassBtnTop = document.getElementById('changePassBtnTop');
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-const prevMonth = document.getElementById('prevMonth');
-const nextMonth = document.getElementById('nextMonth');
+    const loginDiv = document.getElementById("login");
+    const diaryDiv = document.getElementById("diary");
+    const passwordInput = document.getElementById("passwordInput");
+    const loginBtn = document.getElementById("loginBtn");
+    const diaryTitle = document.getElementById("diaryTitle");
+    const datePicker = document.getElementById("datePicker");
+    const editor = document.getElementById("editor");
+    const saveBtn = document.getElementById("saveBtn");
+    const changePassBtn = document.getElementById("changePassBtn");
+    const renameBtn = document.getElementById("renameBtn");
+    const themeToggle = document.getElementById("themeToggle");
+    const bgUpload = document.getElementById("bgUpload");
 
-const prevDay = document.getElementById('prevDay');
-const nextDay = document.getElementById('nextDay');
+    let currentPassword = "53458678";
+    let diaryName = "My Secret Diary";
 
-const themeSelect = document.getElementById('themeSelect');
-const bgUpload = document.getElementById('bgUpload');
-const bgBtn = document.getElementById('bgBtn');
-
-/* ===== STATE & CONSTANTS ===== */
-const SETTINGS_DOC = doc(db, 'entries', 'settings');
-let salt_b64 = null;
-let verifier_b64 = null;
-let diaryName = 'My Secret Diary';
-let aesKey = null;
-let viewMonth = new Date();
-let selectedDate = indiaDateString(new Date());
-let diaryEntriesCache = {}; // store ciphertext metadata
-const DEFAULT_PASSWORD = '53458678';
-const PBKDF2_ITER = 200_000;
-const KEY_LEN = 256;
-
-/* ===== time helpers (India) ===== */
-function indiaDateString(d){
-  const iso = new Date(d.toLocaleString('en-US',{timeZone:'Asia/Kolkata'}));
-  const y = iso.getFullYear();
-  const m = String(iso.getMonth()+1).padStart(2,'0');
-  const dd = String(iso.getDate()).padStart(2,'0');
-  return `${y}-${m}-${dd}`;
-}
-function indiaNow(){ return new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Kolkata'})); }
-
-/* ===== WebCrypto helpers (PBKDF2 -> AES-GCM) ===== */
-function abToB64(buf){ return btoa(String.fromCharCode(...new Uint8Array(buf))); }
-function b64ToAb(b64){ const bin = atob(b64); const arr = new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i); return arr.buffer; }
-
-async function deriveKeyFromPassword(password, salt_b64){
-  const salt = salt_b64 ? b64ToAb(salt_b64) : crypto.getRandomValues(new Uint8Array(16)).buffer;
-  const pwKey = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
-  const derived = await crypto.subtle.deriveKey({name:'PBKDF2', salt, iterations:PBKDF2_ITER, hash:'SHA-256'}, pwKey, {name:'AES-GCM', length:KEY_LEN}, true, ['encrypt','decrypt']);
-  const raw = await crypto.subtle.exportKey('raw', derived);
-  const verifier = await crypto.subtle.digest('SHA-256', raw);
-  return { derivedKey: derived, salt_b64: salt_b64 || abToB64(salt), verifier_b64: abToB64(verifier) };
-}
-async function encryptText(aesKey, plaintext){
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const enc = new TextEncoder().encode(plaintext);
-  const cipher = await crypto.subtle.encrypt({name:'AES-GCM', iv}, aesKey, enc);
-  return { cipher_b64: abToB64(cipher), iv_b64: abToB64(iv) };
-}
-async function decryptText(aesKey, cipher_b64, iv_b64){
-  const cipher = b64ToAb(cipher_b64);
-  const iv = b64ToAb(iv_b64);
-  const plain = await crypto.subtle.decrypt({name:'AES-GCM', iv:new Uint8Array(iv)}, aesKey, cipher);
-  return new TextDecoder().decode(plain);
-}
-
-/* ===== Firestore handlers ===== */
-async function ensureSettings(){
-  const s = await getDoc(SETTINGS_DOC);
-  if(s.exists()){
-    const d = s.data();
-    salt_b64 = d.salt;
-    verifier_b64 = d.verifier;
-    diaryName = d.name || diaryName;
-    diaryTitle.textContent = diaryName;
-  } else {
-    const { derivedKey, salt_b64: newSalt, verifier_b64: newVer } = await deriveKeyFromPassword(DEFAULT_PASSWORD,null);
-    salt_b64 = newSalt; verifier_b64 = newVer;
-    await setDoc(SETTINGS_DOC, { salt: salt_b64, verifier: verifier_b64, name: diaryName });
-  }
-}
-async function loadAllEntriesCache(){
-  diaryEntriesCache = {};
-  const snap = await getDocs(collection(db,'entries'));
-  snap.forEach(d => {
-    if(d.id === 'settings') return;
-    diaryEntriesCache[d.id] = d.data();
-  });
-}
-async function saveEncryptedEntry(dateStr, plaintext){
-  if(!aesKey) throw new Error('No key');
-  const enc = await encryptText(aesKey, plaintext);
-  const payload = { cipher: enc.cipher_b64, iv: enc.iv_b64, lastModified: new Date().toISOString() };
-  await setDoc(doc(db,'entries',dateStr), payload);
-  diaryEntriesCache[dateStr] = payload;
-}
-async function reencryptAllEntries(oldKey, newKey){
-  const snap = await getDocs(collection(db,'entries'));
-  for(const d of snap.docs){
-    if(d.id === 'settings') continue;
-    const data = d.data();
-    try{
-      const text = await decryptText(oldKey, data.cipher, data.iv);
-      const enc = await encryptText(newKey, text);
-      await setDoc(doc(db,'entries', d.id), { cipher: enc.cipher_b64, iv: enc.iv_b64, lastModified: new Date().toISOString() });
-    }catch(e){ console.warn('skip reencrypt for', d.id); }
-  }
-}
-async function updateSettings(salt_new, ver_new, nameVal){
-  await setDoc(SETTINGS_DOC, { salt: salt_new, verifier: ver_new, name: nameVal }, { merge:true });
-}
-
-/* ===== UI flow ===== */
-await ensureSettings(); // ensure settings exists
-
-// Calendar builder
-function buildCalendar(){
-  calGrid.innerHTML = '';
-  const m = new Date(viewMonth.getFullYear(), viewMonth.getMonth(), 1);
-  monthLabel.textContent = m.toLocaleString(undefined,{month:'long', year:'numeric', timeZone:'Asia/Kolkata'});
-  const startDay = m.getDay();
-  const days = new Date(m.getFullYear(), m.getMonth()+1, 0).getDate();
-  for(let i=0;i<startDay;i++) calGrid.appendChild(document.createElement('div'));
-  for(let d=1; d<=days; d++){
-    const dateObj = new Date(m.getFullYear(), m.getMonth(), d);
-    const dateStr = indiaDateString(dateObj);
-    const box = document.createElement('div');
-    box.className='date';
-    if(dateStr === indiaDateString(new Date())) box.classList.add('today');
-    const num = document.createElement('div'); num.className='num'; num.textContent = d;
-    box.appendChild(num);
-    if(diaryEntriesCache[dateStr] && diaryEntriesCache[dateStr].cipher){
-      box.classList.add('has');
-      const dot = document.createElement('div'); dot.className='muted'; dot.textContent = '● saved';
-      dot.style.fontSize='12px'; dot.style.marginTop='6px';
-      box.appendChild(dot);
-    }
-    box.addEventListener('click', ()=> openDate(dateStr));
-    calGrid.appendChild(box);
-  }
-}
-
-// open date in editor (with future locking)
-async function openDate(dateStr){
-  selectedDate = dateStr;
-  selectedDateLabel.textContent = selectedDate;
-  const todayStr = indiaDateString(indiaNow());
-  if(selectedDate > todayStr){
-    editor.innerHTML = '<div style="color:var(--muted)">Future entries are read-only.</div>';
-    saveBtn.classList.add('disabled');
-  } else {
-    const d = await getDoc(doc(db,'entries', dateStr));
-    if(d.exists() && d.data().cipher){
-      try{
-        const plaintext = await decryptText(aesKey, d.data().cipher, d.data().iv);
-        editor.innerHTML = plaintext;
-      } catch(e){
-        alert('Unable to decrypt entry — wrong password?');
-        editor.innerHTML = '';
+    async function loadSettings() {
+      const settingsDoc = await getDoc(doc(db, "entries", "settings"));
+      if (settingsDoc.exists()) {
+        const data = settingsDoc.data();
+        currentPassword = data.password || currentPassword;
+        diaryName = data.name || diaryName;
+        diaryTitle.textContent = diaryName;
+      } else {
+        await setDoc(doc(db, "entries", "settings"), {
+          password: currentPassword,
+          name: diaryName
+        });
       }
-    } else {
-      editor.innerHTML = '';
     }
-    saveBtn.classList.remove('disabled');
-  }
-  refreshFormattingButtons();
-}
 
-// Save
-async function doSave(){
-  if(saveBtn.classList.contains('disabled')) return;
-  const todayStr = indiaDateString(indiaNow());
-  if(selectedDate > todayStr){ alert('Cannot save future entries'); return; }
-  try{
-    await saveEncryptedEntry(selectedDate, editor.innerHTML);
-    statusText.textContent = 'Saved: ' + new Date().toLocaleString('en-IN', { timeZone:'Asia/Kolkata' });
-    buildCalendar();
-  }catch(e){ alert('Save failed: '+e.message); }
-}
+    await loadSettings();
 
-/* LOGIN: keep form same but no default password shown */
-loginBtn.addEventListener('click', async ()=>{
-  const pass = (passwordInput.value || '').trim();
-  if(!pass){ alert('Enter password'); return; }
-  try{
-    const { derivedKey, verifier_b64: vcalc } = await deriveKeyFromPassword(pass, salt_b64);
-    if(vcalc !== verifier_b64){ alert('Wrong password'); return; }
-    aesKey = derivedKey;
-    const sdoc = await getDoc(SETTINGS_DOC);
-    diaryName = sdoc.exists() ? (sdoc.data().name || diaryName) : diaryName;
-    diaryTitle.textContent = diaryName;
-    // show diary and load cache
-    loginDiv.style.display = 'none';
-    diaryWrap.style.display = 'block';
-    await loadAllEntriesCache();
-    buildCalendar();
-    selectedDate = indiaDateString(indiaNow());
-    await openDate(selectedDate);
-  }catch(err){
-    console.error(err);
-    alert('Login failed: ' + (err.message || err));
-  }
-});
+    loginBtn.onclick = async () => {
+      if (passwordInput.value === currentPassword) {
+        loginDiv.style.display = "none";
+        diaryDiv.style.display = "block";
+        datePicker.valueAsDate = new Date();
+        loadEntry();
+      } else {
+        alert("Wrong password!");
+      }
+    };
 
-/* Formatting commands (ensure editor kept focused) */
-function execFormat(cmd, value=null){
-  // focus editor so commands apply to current selection/typing
-  editor.focus();
-  document.execCommand(cmd, false, value);
-  refreshFormattingButtons();
-}
-btnBold.addEventListener('click', ()=> execFormat('bold'));
-btnItalic.addEventListener('click', ()=> execFormat('italic'));
-btnUnderline.addEventListener('click', ()=> execFormat('underline'));
-btnStrike.addEventListener('click', ()=> execFormat('strikeThrough'));
+    async function loadEntry() {
+      const date = datePicker.value;
+      const entryDoc = await getDoc(doc(db, "entries", date));
+      if (entryDoc.exists()) {
+        const encryptedText = entryDoc.data().text;
+        const decrypted = CryptoJS.AES.decrypt(encryptedText, currentPassword).toString(CryptoJS.enc.Utf8);
+        editor.innerHTML = decrypted || "";
+      } else editor.innerHTML = "";
+    }
 
-/* Color picker behavior: only open when color or highlight clicked */
-let lastColorMode = null; // 'fore' or 'hilite'
-highlightBtn.addEventListener('click', ()=>{
-  lastColorMode = 'hilite';
-  colorPicker.value = '#fff176';
-  colorPicker.click();
-});
-colorBtn.addEventListener('click', ()=>{
-  lastColorMode = 'fore';
-  colorPicker.value = '#000000';
-  colorPicker.click();
-});
-colorPicker.addEventListener('input', ()=>{
-  const col = colorPicker.value;
-  if(lastColorMode === 'hilite') execFormat('hiliteColor', col);
-  else execFormat('foreColor', col);
-});
+    datePicker.onchange = loadEntry;
 
-/* formatting button active state reflecting selection */
-function refreshFormattingButtons(){
-  const list = [
-    {el:btnBold, cmd:'bold'},
-    {el:btnItalic, cmd:'italic'},
-    {el:btnUnderline, cmd:'underline'},
-    {el:btnStrike, cmd:'strikeThrough'}
-  ];
-  list.forEach(item=>{
-    try {
-      if(document.queryCommandState(item.cmd)) item.el.classList.add('active');
-      else item.el.classList.remove('active');
-    } catch(e){ /* ignore on failures */ }
-  });
-}
-editor.addEventListener('keyup', refreshFormattingButtons);
-editor.addEventListener('mouseup', refreshFormattingButtons);
-editor.addEventListener('input', ()=> { statusText.textContent = 'Unsaved changes'; });
+    saveBtn.onclick = async () => {
+      const date = datePicker.value;
+      const text = editor.innerHTML;
+      const encrypted = CryptoJS.AES.encrypt(text, currentPassword).toString();
+      await setDoc(doc(db, "entries", date), { text: encrypted });
+      alert("Saved securely!");
+    };
 
-/* Save */
-saveBtn.addEventListener('click', doSave);
+    changePassBtn.onclick = async () => {
+      const newPass = prompt("Enter new password:");
+      if (newPass && newPass.trim() !== "") {
+        currentPassword = newPass;
+        await setDoc(doc(db, "entries", "settings"), {
+          password: currentPassword,
+          name: diaryName
+        });
+        alert("Password changed!");
+      }
+    };
 
-/* calendar navigation */
-prevMonth.addEventListener('click', ()=>{ viewMonth.setMonth(viewMonth.getMonth()-1); buildCalendar(); });
-nextMonth.addEventListener('click', ()=>{ viewMonth.setMonth(viewMonth.getMonth()+1); buildCalendar(); });
-prevDay.addEventListener('click', async ()=>{ const d = new Date(selectedDate); d.setDate(d.getDate()-1); const s = indiaDateString(d); await openDate(s); });
-nextDay.addEventListener('click', async ()=>{ const d = new Date(selectedDate); d.setDate(d.getDate()+1); const s = indiaDateString(d); await openDate(s); });
+    renameBtn.onclick = async () => {
+      const newName = prompt("Enter new diary name:");
+      if (newName && newName.trim() !== "") {
+        diaryName = newName;
+        diaryTitle.textContent = diaryName;
+        await setDoc(doc(db, "entries", "settings"), {
+          password: currentPassword,
+          name: diaryName
+        });
+        alert("Diary renamed!");
+      }
+    };
 
-/* Rename & change password (top-right) */
-renameBtnTop.addEventListener('click', async ()=>{
-  const newName = prompt('Enter new diary name:', diaryName);
-  if(newName === null) return;
-  diaryName = newName.trim() || diaryName;
-  diaryTitle.textContent = diaryName;
-  await updateSettings(salt_b64, verifier_b64, diaryName);
-  alert('Diary renamed');
-});
+    // Color palette
+    const colorBtn = document.getElementById("colorBtn");
+    const colorPicker = document.getElementById("colorPicker");
+    const colors = ["#000000","#ff0000","#ff7f00","#ffff00","#00ff00","#0000ff","#8b00ff","#ff69b4","#00ffff","#ffffff"];
+    colorPicker.innerHTML = colors.map(c=>`<div style="background:${c};width:25px;height:25px;border-radius:50%;display:inline-block;cursor:pointer;margin:3px;"></div>`).join('');
+    colorBtn.onclick = (e)=>{
+      colorPicker.style.display = colorPicker.style.display==="block"?"none":"block";
+      colorPicker.style.left = e.pageX+"px";
+      colorPicker.style.top = e.pageY+"px";
+    };
+    colorPicker.onclick = (e)=>{
+      const color = e.target.style.background;
+      document.execCommand('foreColor', false, color);
+      colorPicker.style.display="none";
+    };
 
-changePassBtnTop.addEventListener('click', async ()=>{
-  const cur = prompt('Enter current password:');
-  if(cur === null) return;
-  const { verifier_b64: vcalc } = await deriveKeyFromPassword(cur, salt_b64);
-  if(vcalc !== verifier_b64){ alert('Current password incorrect'); return; }
-  const newPass = prompt('Enter NEW password:');
-  if(!newPass || !newPass.trim()){ alert('Cancelled'); return; }
-  const { derivedKey: newDerived, salt_b64: newSalt, verifier_b64: newVer } = await deriveKeyFromPassword(newPass, null);
-  try{
-    const { derivedKey: oldDerived } = await deriveKeyFromPassword(cur, salt_b64);
-    await reencryptAllEntries(oldDerived, newDerived);
-    salt_b64 = newSalt; verifier_b64 = newVer; aesKey = newDerived;
-    await updateSettings(salt_b64, verifier_b64, diaryName);
-    alert('Password changed successfully');
-  }catch(e){ console.error(e); alert('Password change failed: '+e.message); }
-});
+    window.highlight = (btn)=>{
+      const active = btn.classList.toggle("active");
+      document.execCommand("hiliteColor", false, active?"yellow":"transparent");
+    };
 
-/* background upload */
-bgUpload.addEventListener('change', (ev)=>{
-  const f = ev.target.files[0];
-  if(!f) return;
-  const r = new FileReader();
-  r.onload = (e)=> {
-    document.body.style.backgroundImage = `url('${e.target.result}')`;
-    document.body.style.backgroundSize = 'cover';
-    document.body.style.backgroundPosition = 'center';
-  };
-  r.readAsDataURL(f);
-});
-document.getElementById('bgBtn').addEventListener('click', ()=> bgUpload.click());
+    window.execCmd = (cmd, btn)=>{
+      document.execCommand(cmd, false, null);
+    };
 
-/* theme switch */
-themeSelect.addEventListener('change', (ev)=>{
-  if(ev.target.value === 'dark'){
-    document.documentElement.style.setProperty('--bg','#071026');
-    document.documentElement.style.setProperty('--card','#071425');
-    document.documentElement.style.setProperty('--paper','#061220');
-    document.documentElement.style.setProperty('--muted','#9aa3b2');
-    document.documentElement.style.setProperty('--accent','#60a5fa');
-    document.documentElement.style.setProperty('--accent-active','#3b82f6');
-    document.body.style.color = '#eaf1ff';
-  } else {
-    document.documentElement.style.setProperty('--bg','#f6f9fc');
-    document.documentElement.style.setProperty('--card','#ffffff');
-    document.documentElement.style.setProperty('--paper','#fffef6');
-    document.documentElement.style.setProperty('--muted','#6b7280');
-    document.documentElement.style.setProperty('--accent','#1f6feb');
-    document.documentElement.style.setProperty('--accent-active','#0b63d6');
-    document.body.style.color = '';
-  }
-});
-themeSelect.value = 'light';
+    themeToggle.onclick = ()=>{
+      document.body.dataset.theme = document.body.dataset.theme==="dark"?"light":"dark";
+    };
 
-/* keyboard enter on login */
-passwordInput.addEventListener('keyup', (e)=>{ if(e.key === 'Enter') loginBtn.click(); });
-
-/* initial calendar label */
-selectedDateLabel.textContent = selectedDate;
-
-/* done - initial state shows login only */
-</script>
+    bgUpload.onchange = (e)=>{
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ()=>{ document.body.style.backgroundImage = `url(${reader.result})`; };
+      reader.readAsDataURL(file);
+    };
+  </script>
 </body>
 </html>
