@@ -8,64 +8,103 @@
   <style>
     body {
       font-family: 'Quicksand', sans-serif;
-      background-color: #f4f7fb;
+      background: #f6f9fc;
       margin: 0;
       padding: 0;
+      height: 100vh;
       display: flex;
       justify-content: center;
       align-items: center;
-      height: 100vh;
     }
+
     #login, #diary {
       background: white;
-      border-radius: 16px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-      padding: 30px;
-      width: 360px;
-      max-width: 90%;
+      border-radius: 20px;
+      box-shadow: 0 6px 30px rgba(0,0,0,0.1);
+      padding: 40px;
+      width: 800px;
+      max-width: 95%;
+      transition: 0.3s;
     }
+
     h1 {
       text-align: center;
       color: #333;
+      margin-bottom: 20px;
     }
-    input, textarea, button, select {
-      width: 100%;
-      margin-top: 10px;
+
+    input, button, select {
+      font-family: inherit;
+      font-size: 15px;
       padding: 10px;
       border-radius: 8px;
       border: 1px solid #ccc;
       outline: none;
-      font-size: 15px;
-      font-family: inherit;
+      width: 100%;
+      margin: 5px 0;
     }
+
     button {
-      background-color: #4a90e2;
+      background: #4a90e2;
       color: white;
       border: none;
       cursor: pointer;
       transition: 0.2s;
     }
-    button:hover { background-color: #357abd; }
+    button:hover { background: #357abd; }
+
+    #toolbar {
+      margin: 10px 0;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    #toolbar button {
+      flex: 1;
+      padding: 8px;
+      border-radius: 6px;
+      background: #e6e9ef;
+      color: #333;
+      border: 1px solid #ccc;
+    }
+    #toolbar button:hover {
+      background: #d0d3da;
+    }
+
+    #editor {
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      padding: 15px;
+      background: #fafafa;
+      height: 400px;
+      overflow-y: auto;
+      font-size: 16px;
+      line-height: 1.5;
+    }
+
     #calendar {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-top: 20px;
+      margin-bottom: 15px;
     }
+
     #calendar input {
       width: auto;
-      flex: 1;
     }
-    textarea {
-      height: 200px;
-      resize: none;
+
+    #actionButtons {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 15px;
     }
   </style>
 </head>
 <body>
   <div id="login">
     <h1>🔒 My Secret Diary</h1>
-    <p>Enter your diary password</p>
+    <p style="text-align:center;">Enter your diary password</p>
     <input type="password" id="passwordInput" placeholder="Password">
     <button id="loginBtn">Login</button>
   </div>
@@ -75,10 +114,23 @@
     <div id="calendar">
       <input type="date" id="datePicker" />
     </div>
-    <textarea id="entryText" placeholder="Start writing your thoughts..."></textarea>
-    <button id="saveBtn">💾 Save Entry</button>
-    <button id="changePassBtn" style="background-color:#f66;">Change Password</button>
-    <button id="renameBtn" style="background-color:#6c6;">Rename Diary</button>
+
+    <div id="toolbar">
+      <button onclick="execCmd('bold')"><b>B</b></button>
+      <button onclick="execCmd('italic')"><i>I</i></button>
+      <button onclick="execCmd('underline')"><u>U</u></button>
+      <button onclick="execCmd('strikeThrough')">S</button>
+      <button onclick="execCmd('hiliteColor', 'yellow')">🖍 Highlight</button>
+      <button onclick="execCmd('foreColor', prompt('Enter color (name or hex):', '#ff0000'))">🎨 Color</button>
+    </div>
+
+    <div id="editor" contenteditable="true"></div>
+
+    <div id="actionButtons">
+      <button id="saveBtn">💾 Save</button>
+      <button id="renameBtn" style="background-color:#6c6;">Rename Diary</button>
+      <button id="changePassBtn" style="background-color:#f66;">Change Password</button>
+    </div>
   </div>
 
   <script type="module">
@@ -104,7 +156,7 @@
     const loginBtn = document.getElementById("loginBtn");
     const diaryTitle = document.getElementById("diaryTitle");
     const datePicker = document.getElementById("datePicker");
-    const entryText = document.getElementById("entryText");
+    const editor = document.getElementById("editor");
     const saveBtn = document.getElementById("saveBtn");
     const changePassBtn = document.getElementById("changePassBtn");
     const renameBtn = document.getElementById("renameBtn");
@@ -143,14 +195,14 @@
     async function loadEntry() {
       const date = datePicker.value;
       const entryDoc = await getDoc(doc(db, "entries", date));
-      entryText.value = entryDoc.exists() ? entryDoc.data().text : "";
+      editor.innerHTML = entryDoc.exists() ? entryDoc.data().text : "";
     }
 
     datePicker.onchange = loadEntry;
 
     saveBtn.onclick = async () => {
       const date = datePicker.value;
-      const text = entryText.value;
+      const text = editor.innerHTML;
       await setDoc(doc(db, "entries", date), { text });
       alert("Saved!");
     };
@@ -178,6 +230,11 @@
         });
         alert("Diary renamed!");
       }
+    };
+
+    // Text formatting
+    window.execCmd = (command, value = null) => {
+      document.execCommand(command, false, value);
     };
   </script>
 </body>
