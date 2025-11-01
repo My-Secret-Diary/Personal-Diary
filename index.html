@@ -1,31 +1,61 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>My Secret Diary — Instant Login + Encrypted</title>
-<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;700&display=swap" rel="stylesheet">
+<title>My Secret Diary — Upgraded</title>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
-  :root{ --accent:#4a90e2; --accent-strong:#357abd; --muted:#6b7280; --bg:#f4f7fb; }
+  :root{
+    --accent:#4a90e2; --accent-strong:#357abd; --muted:#6b7280; --bg:#f4f7fb;
+  }
   *{box-sizing:border-box}
-  body{ margin:0; font-family:'Quicksand',system-ui,Roboto,Arial; background:var(--bg); min-height:100vh; display:flex; align-items:center; justify-content:center; padding:18px; }
+  body{
+    margin:0; font-family:'Quicksand',system-ui,Segoe UI,Roboto,Arial; background:var(--bg); min-height:100vh;
+    display:flex; align-items:center; justify-content:center; padding:18px;
+  }
 
-  /* ORIGINAL LOGIN (kept unchanged visually & markup) */
-  #login, #diary { background:white; border-radius:16px; box-shadow:0 4px 20px rgba(0,0,0,0.1); padding:30px; }
-  #login { width:360px; max-width:90%; }
+  /* === ORIGINAL LOGIN (kept exactly as user originally gave) === */
+  #login, #diary {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    padding: 30px;
+  }
+  /* ensure login card dimensions and look are unchanged */
+  #login {
+    width: 360px;
+    max-width: 90%;
+  }
   h1 { text-align:center; color:#333; margin:0 0 8px 0; }
-  input, textarea, button, select { width:100%; margin-top:10px; padding:10px; border-radius:8px; border:1px solid #ccc; outline:none; font-size:15px; font-family:inherit; }
-  button { background:var(--accent); color:#fff; border:none; cursor:pointer; transition:background .12s }
-  button:hover{ background:var(--accent-strong) }
-  /* Keep login markup ids the same as you provided */
+  input, textarea, button, select {
+    width: 100%;
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    outline: none;
+    font-size: 15px;
+    font-family: inherit;
+  }
+  button { background-color: var(--accent); color: white; border: none; cursor: pointer; transition: 0.15s }
+  button:hover{ background-color: var(--accent-strong) }
+  #calendar { display:flex; justify-content:space-between; align-items:center; margin-top:20px; }
+  #calendar input { width:auto; flex:1; }
+  textarea { height:200px; resize:none; }
 
-  /* APP ROOT - hidden until login clicked */
+  /* === DIARY APP (hidden initially) === */
   #appRoot { display:none; width:100%; max-width:1200px; height:86vh; margin:0 auto; }
 
-  .app { display:flex; gap:18px; height:100%; align-items:stretch; }
+  .app {
+    display:flex; gap:18px; height:100%; align-items:stretch;
+  }
 
-  /* left calendar */
-  .left { width:300px; background:linear-gradient(180deg,#fff,#f5fbff); border-radius:12px; padding:14px; display:flex; flex-direction:column; box-shadow:0 8px 30px rgba(2,6,23,0.06); }
+  /* left calendar column */
+  .left {
+    width:300px; background: linear-gradient(180deg,#ffffff,#f7fbff); border-radius:12px; padding:14px; box-shadow:0 8px 30px rgba(2,6,23,0.06);
+    display:flex; flex-direction:column;
+  }
   .monthHeader{ display:flex; justify-content:space-between; align-items:center; gap:8px; }
   .monthHeader h3{ margin:0; font-size:18px; }
   .calendarGrid{ display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin-top:10px; }
@@ -33,31 +63,45 @@
   .dayCell{ height:44px; border-radius:8px; display:flex; align-items:center; justify-content:center; position:relative; cursor:pointer; background:transparent; transition:transform .08s }
   .dayCell:hover{ transform: translateY(-3px); }
   .dayCell.disabled{ opacity:0.5; cursor:default }
-  .dayCell.today{ box-shadow: inset 0 0 0 2px rgba(74,144,226,0.12); }
-  .dayCell.selected{ background:var(--accent); color:#fff; }
-  .dot{ position:absolute; bottom:6px; width:8px; height:8px; border-radius:50%; background:var(--accent-strong); display:none; }
-  .dayCell.hasEntry .dot{ display:block; }
+  .dayCell.today{ box-shadow: inset 0 0 0 2px rgba(74,144,226,0.12); border-radius:8px; }
+  .dayCell.selected{ background:var(--accent); color:#fff }
+  .dot { position:absolute; bottom:6px; width:8px; height:8px; border-radius:50%; background:var(--accent-strong); display:none }
+  .dayCell.hasEntry .dot{ display:block }
 
-  /* right editor */
-  .right{ flex:1; display:flex; flex-direction:column; gap:12px; padding:14px; border-radius:12px; background:linear-gradient(180deg,#fff,#fbfdff); box-shadow:0 8px 30px rgba(2,6,23,0.06); position:relative; overflow:hidden; }
+  .legend{ margin-top:10px; font-size:13px; color:var(--muted) }
+
+  /* right editor column */
+  .right{ flex:1; display:flex; flex-direction:column; gap:12px; padding:14px; border-radius:12px; background:linear-gradient(180deg,#ffffff,#fbfdff); box-shadow:0 8px 30px rgba(2,6,23,0.06); position:relative; overflow:hidden; }
   .topRow{ display:flex; justify-content:space-between; align-items:center; gap:8px; }
   .titleWrap .title{ font-size:20px; font-weight:700 }
   .titleWrap .sub{ font-size:13px; color:var(--muted) }
-  .controls{ display:flex; gap:8px; align-items:center; }
+
+  .controls{ display:flex; gap:8px; align-items:center }
+
   .btn{ padding:8px 12px; border-radius:10px; border:none; cursor:pointer; background:var(--accent); color:#fff; font-weight:600 }
   .btn.ghost{ background:transparent; color:var(--muted); border:1px solid rgba(0,0,0,0.06) }
+  .btn.warn{ background:#ef4444 }
 
-  .toolbar{ display:flex; gap:8px; flex-wrap:wrap; padding:8px; border-radius:10px; background:rgba(10,20,40,0.03); align-items:center; }
-  .toolbar button, .toolbar select, .toolbar input[type="color"], .toolbar input[type="file"] { padding:8px; border-radius:8px; border:1px solid rgba(0,0,0,0.06); background:#fff; cursor:pointer; }
-  .toolbar .toggle.active{ background:var(--accent); color:#fff; border-color:transparent; }
+  .toolbar{ display:flex; gap:8px; flex-wrap:wrap; padding:8px; border-radius:10px; background:rgba(10,20,40,0.03) }
+  .toolbar button, .toolbar select, .toolbar input[type=color], .toolbar input[type=file]{
+    padding:8px; border-radius:8px; border:1px solid rgba(0,0,0,0.06); background:#fff; cursor:pointer;
+  }
+  .toolbar .toggle.active{ background:var(--accent); color:#fff; border-color:transparent }
 
-  .content{ padding:18px; border-radius:12px; min-height:320px; border:1px solid rgba(0,0,0,0.05); overflow:auto; background: rgba(255,255,255,0.85); }
+  .content { padding:18px; border-radius:12px; min-height:320px; border:1px solid rgba(0,0,0,0.05); overflow:auto; background: rgba(255,255,255,0.85) }
   .content[contenteditable="true"]{ cursor:text }
-  .placeholder{ color:#94a3b8 }
+  .placeholder { color:#94a3b8 }
 
   .bottom{ display:flex; justify-content:flex-end; align-items:center; gap:8px; }
 
-  @media (max-width:980px){ .app{ flex-direction:column; height:auto } .left{ width:100% } }
+  /* background preview */
+  .bgPreview{ width:40px; height:28px; border-radius:8px; border:1px solid rgba(0,0,0,0.06); background-size:cover; background-position:center }
+
+  /* responsive */
+  @media (max-width:980px){
+    .app{ flex-direction:column; height:auto }
+    .left{ width:100% }
+  }
 
   /* dark theme */
   body[data-theme="dark"]{ background:#071025 }
@@ -68,7 +112,7 @@
 </head>
 <body>
 
-  <!-- ORIGINAL LOGIN (exactly as you provided; unchanged) -->
+  <!-- ORIGINAL LOGIN (exactly unchanged) -->
   <div id="login">
     <h1>🔒 My Secret Diary</h1>
     <p>Enter your diary password</p>
@@ -76,9 +120,11 @@
     <button id="loginBtn">Login</button>
   </div>
 
-  <!-- APP (hidden until login click) -->
-  <div id="appRoot">
+  <!-- APP ROOT (hidden; appears after login) -->
+  <div id="appRoot" style="display:none;">
     <div class="app" id="app">
+
+      <!-- LEFT: Calendar -->
       <div class="left">
         <div class="monthHeader">
           <div class="monthNav"><button id="prevMonthBtn" title="Previous month">◀</button></div>
@@ -92,11 +138,12 @@
 
         <div class="calendarGrid" id="calendarGrid"></div>
 
-        <div class="legend" style="margin-top:10px; font-size:13px; color:var(--muted)">
+        <div class="legend">
           <div style="display:flex; gap:8px; align-items:center"><div style="width:10px;height:10px;border-radius:50%;background:var(--accent);"></div><div>Saved Entry</div></div>
         </div>
       </div>
 
+      <!-- RIGHT: Editor -->
       <div class="right">
         <div class="topRow">
           <div class="titleWrap">
@@ -115,21 +162,21 @@
           <button id="boldBtn" class="toggle" title="Bold (Ctrl/Cmd+B)"><strong>B</strong></button>
           <button id="italicBtn" class="toggle" title="Italic (Ctrl/Cmd+I)"><em>I</em></button>
           <button id="underlineBtn" class="toggle" title="Underline (Ctrl/Cmd+U)"><u>U</u></button>
+
           <button id="highlightBtn" title="Highlight selected text">🖍️</button>
 
-          <label><input type="color" id="textColor" value="#111111" title="Text color" /></label>
+          <label><input type="color" id="textColor" title="Text color" value="#111111" /></label>
 
           <label><select id="fontSelect"><option value="Quicksand">Quicksand</option><option value="Inter">Inter</option><option value="Georgia">Serif</option><option value="Courier New">Mono</option></select></label>
 
           <label><select id="sizeSelect"><option value="14px">14</option><option value="16px" selected>16</option><option value="18px">18</option><option value="20px">20</option></select></label>
 
-          <label style="display:flex; align-items:center; gap:8px;">
-            <input type="color" id="pageBgColor" title="Page background color" />
-            <span style="font-size:13px; color:var(--muted)">Page BG</span>
-          </label>
+          <div style="width:10px;"></div>
+
+          <label style="display:flex; align-items:center; gap:8px;"><input type="color" id="pageBgColor" title="Page background color" /> <span style="font-size:13px;color:var(--muted)">Page BG</span></label>
 
           <label style="display:flex; align-items:center; gap:8px;">
-            <input type="text" id="pageBgURL" placeholder="Image URL for page background" style="min-width:200px; padding:8px; border-radius:8px; border:1px solid #e6eefc" />
+            <input type="text" id="pageBgURL" placeholder="Image URL for page background" style="min-width:200px;padding:8px;border-radius:8px;border:1px solid #e6eefc" />
             <button id="applyBgUrl" class="btn ghost">Apply</button>
           </label>
 
@@ -157,16 +204,24 @@
         </div>
 
       </div>
-
     </div>
   </div>
 
 <script type="module">
+/* ---------------------------
+   FULL APP JS (fixed to not block UI on login)
+   - Original login markup unchanged
+   - App shows instantly after correct password (same behavior)
+   - Heavy work (month indexing) runs after diary is shown
+   - Encryption PBKDF2->AES-GCM per-entry
+   - Calendar, editor, background upload/save included
+   --------------------------- */
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-storage.js";
 
-/* ------------------ Config (kept your original values) ------------------ */
+// ---------- Firebase config (kept original) ----------
 const firebaseConfig = {
   apiKey: "AIzaSyDRpLl01xtSZ7f0ZbId7zFASUJoem4L69s",
   authDomain: "my-secret-diary-9b62c.firebaseapp.com",
@@ -175,11 +230,12 @@ const firebaseConfig = {
   messagingSenderId: "139353851381",
   appId: "1:139353851381:web:3050a47540d36a2243ccbc"
 };
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const storage = getStorage(app);
 
-/* ------------------ DOM refs ------------------ */
+const firebaseApp = initializeApp(firebaseConfig);
+const db = getFirestore(firebaseApp);
+const storage = getStorage(firebaseApp);
+
+// ---------- DOM refs ----------
 const loginDiv = document.getElementById('login');
 const passwordInput = document.getElementById('passwordInput');
 const loginBtn = document.getElementById('loginBtn');
@@ -217,18 +273,19 @@ const saveBtn = document.getElementById('saveBtn');
 
 const diaryTitleElem = document.getElementById('diaryTitle');
 
-/* ------------------ App state ------------------ */
-let storedPassword = "53458678"; // fallback default preserved
+// ---------- App state ----------
+let settingsLoaded = false;
+let storedPassword = "53458678"; // legacy default (preserve original behavior)
 let diaryName = "My Secret Diary";
 let pageBackground = "";
 let currentPassword = null;
-let selectedDate = new Date().toISOString().slice(0,10);
+let selectedDate = new Date().toISOString().slice(0,10); // yyyy-mm-dd
 let calendarYear = (new Date()).getFullYear();
 let calendarMonth = (new Date()).getMonth();
-let entriesIndex = {};
+let entriesIndex = {}; // date -> true
 let currentEntryMeta = {};
 
-/* ------------------ Utils & Crypto ------------------ */
+// ---------- Helpers ----------
 const toYMD = d => (new Date(d)).toISOString().slice(0,10);
 const formatNice = d => (new Date(d)).toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'});
 
@@ -260,7 +317,7 @@ async function decryptPayload(password, docData){
   return JSON.parse(dec.decode(plain));
 }
 
-/* ------------------ Settings load (non-blocking on page load) ------------------ */
+// ---------- Settings load (non-blocking initial) ----------
 async function loadSettingsFromFirestore(){
   try {
     const sRef = doc(db, "entries", "settings");
@@ -271,36 +328,39 @@ async function loadSettingsFromFirestore(){
       if(data.name) diaryName = data.name;
       if(data.bg) pageBackground = data.bg;
     } else {
-      // create default settings doc (plaintext) to preserve login behavior
+      // create default settings doc plaintext (preserve original login behavior)
       await setDoc(sRef, { password: storedPassword, name: diaryName, bg: pageBackground });
     }
+    settingsLoaded = true;
     diaryTitleElem.textContent = diaryName;
     applyPageBackground(pageBackground);
   } catch(err){
-    console.warn('loadSettings error', err);
+    console.error('loadSettings error', err);
+    settingsLoaded = true;
   }
 }
-// start loading settings in background immediately (non-blocking)
-loadSettingsFromFirestore();
 
-/* ------------------ Calendar helpers ------------------ */
+// call but don't block UI
+loadSettingsFromFirestore().catch(()=>{});
+
+// load entries index for month by checking each date doc (simple approach)
 async function loadEntriesIndexForMonth(year, month){
   entriesIndex = {};
   const days = new Date(year, month+1, 0).getDate();
-  // parallel checks
-  const promises = [];
+  const checks = [];
   for(let d=1; d<=days; d++){
     const key = toYMD(new Date(year, month, d));
-    promises.push((async ()=>{
+    checks.push((async ()=>{
       try {
         const snap = await getDoc(doc(db, "entries", key));
-        if(snap.exists()) entriesIndex[key] = true;
+        if(snap.exists()) entriesIndex[key]=true;
       } catch(e){}
     })());
   }
-  await Promise.all(promises);
+  await Promise.all(checks);
 }
 
+// ---------- Calendar rendering ----------
 function renderCalendar(year, month){
   calendarYear = year; calendarMonth = month;
   const first = new Date(year, month, 1);
@@ -312,7 +372,8 @@ function renderCalendar(year, month){
   for(let d=1; d<=daysInMonth; d++){
     const dt = new Date(year, month, d);
     const key = toYMD(dt);
-    const cell = document.createElement('div'); cell.className='dayCell';
+    const cell = document.createElement('div');
+    cell.className='dayCell';
     const num = document.createElement('div'); num.className='num'; num.textContent = d;
     cell.appendChild(num);
     const dot = document.createElement('div'); dot.className='dot';
@@ -320,29 +381,52 @@ function renderCalendar(year, month){
     cell.appendChild(dot);
     const todayKey = toYMD(new Date());
     if(key === todayKey) cell.classList.add('today');
-    cell.onclick = async ()=> { await applySelectedDate(key, dt); };
+    cell.onclick = async ()=>{ await applySelectedDate(key, dt); };
     if(key === selectedDate) cell.classList.add('selected');
     calendarGrid.appendChild(cell);
   }
 }
 
-function clearCalendarSelection(){ calendarGrid.querySelectorAll('.dayCell').forEach(c=>c.classList.remove('selected')); }
+function clearCalendarSelection(){
+  calendarGrid.querySelectorAll('.dayCell').forEach(c=>c.classList.remove('selected'));
+}
 
 async function applySelectedDate(key, dt){
   selectedDate = key;
   clearCalendarSelection();
   calendarGrid.querySelectorAll('.dayCell').forEach(n=>{
     const num = n.querySelector('.num')?.textContent;
-    if(num && parseInt(num,10) === dt.getDate()) n.classList.add('selected');
+    if(num && parseInt(num,10) === dt.getDate()){
+      n.classList.add('selected');
+    }
   });
   selectedDateSpan.textContent = formatNice(dt);
   await loadEntryForDate(key);
 }
 
-/* ------------------ Editor helpers ------------------ */
-function exec(command, value=null){ try{ document.execCommand(command, false, value); }catch(e){ console.warn(e) } editor.focus(); updateToolbarStates(); }
-function updateToolbarStates(){ try{ boldBtn.classList.toggle('active', document.queryCommandState('bold')); italicBtn.classList.toggle('active', document.queryCommandState('italic')); underlineBtn.classList.toggle('active', document.queryCommandState('underline')); }catch(e){} }
-function ensurePlaceholder(){ if(!editor.innerText.trim()){ editor.innerHTML = '<div class="placeholder">Start writing your thoughts...</div>'; } else { const ph = editor.querySelector('.placeholder'); if(ph) ph.remove(); } }
+// ---------- Editor helpers ----------
+function exec(command, value=null){
+  try { document.execCommand(command, false, value); } catch(e){}
+  editor.focus();
+  updateToolbarStates();
+}
+
+function updateToolbarStates(){
+  try {
+    boldBtn.classList.toggle('active', document.queryCommandState('bold'));
+    italicBtn.classList.toggle('active', document.queryCommandState('italic'));
+    underlineBtn.classList.toggle('active', document.queryCommandState('underline'));
+  } catch(e){}
+}
+
+function ensurePlaceholder(){
+  if(!editor.innerText.trim()){
+    editor.innerHTML = '<div class="placeholder">Start writing your thoughts...</div>';
+  } else {
+    const ph = editor.querySelector('.placeholder');
+    if(ph) ph.remove();
+  }
+}
 
 editor.addEventListener('input', ()=>{ ensurePlaceholder(); updateToolbarStates(); });
 editor.addEventListener('keyup', updateToolbarStates);
@@ -351,9 +435,10 @@ editor.addEventListener('mouseup', updateToolbarStates);
 boldBtn.onclick = ()=> exec('bold');
 italicBtn.onclick = ()=> exec('italic');
 underlineBtn.onclick = ()=> exec('underline');
-highlightBtn.onclick = ()=> { const color='#fff59b'; try{ exec('hiliteColor', color); }catch(e){ exec('backColor', color); } };
+highlightBtn.onclick = ()=> { const color = '#fff59b'; try{ exec('hiliteColor', color) }catch(e){ exec('backColor', color)} };
 textColor.oninput = e => exec('foreColor', e.target.value);
 fontSelect.onchange = e => exec('fontName', e.target.value);
+// size: wrap selection in span
 sizeSelect.onchange = e => {
   const val = e.target.value;
   try {
@@ -365,21 +450,34 @@ sizeSelect.onchange = e => {
     span.style.fontSize = val;
     span.appendChild(range.extractContents());
     range.insertNode(span);
+    sel.removeAllRanges();
+    const newRange = document.createRange();
+    newRange.selectNodeContents(span);
+    sel.addRange(newRange);
   } catch(e){ console.warn(e) }
-};
+}
 
-/* ------------------ Page background controls ------------------ */
+// ---------- Page background controls ----------
 function applyPageBackground(value){
   pageBackground = value || '';
   if(!value){ document.body.style.backgroundImage=''; document.body.style.background=''; return; }
   if(value.startsWith('http')){ document.body.style.backgroundImage = `url("${value}")`; document.body.style.backgroundSize='cover'; document.body.style.backgroundPosition='center'; }
   else { document.body.style.backgroundImage=''; document.body.style.background = value; }
 }
+
 async function saveSettingsBackground(value){
-  try { await setDoc(doc(db, "entries", "settings"), { password: storedPassword, name: diaryName, bg: value }); } catch(e){ console.warn('saveSettingsBackground', e); }
+  try {
+    await setDoc(doc(db,"entries","settings"), { password: storedPassword, name: diaryName, bg: value });
+  } catch(e){ console.error('saveSettingsBackground',e) }
 }
+
 pageBgColor.oninput = e => { applyPageBackground(e.target.value); saveSettingsBackground(e.target.value); };
-applyBgUrl.onclick = async ()=> { const u = pageBgURL.value.trim(); if(!u){ alert('Enter an image URL'); return; } applyPageBackground(u); await saveSettingsBackground(u); };
+applyBgUrl.onclick = async ()=> {
+  const u = pageBgURL.value.trim();
+  if(!u){ alert('Enter an image URL'); return; }
+  applyPageBackground(u);
+  await saveSettingsBackground(u);
+};
 uploadBgBtn.onclick = async ()=> {
   const f = bgFile.files[0];
   if(!f){ alert('Choose an image'); return; }
@@ -396,13 +494,13 @@ uploadBgBtn.onclick = async ()=> {
   } catch(e){ console.error(e); statusText.textContent='Upload failed'; alert('Upload failed') }
 };
 
-/* ------------------ Theme toggle ------------------ */
+// ---------- Theme toggle ----------
 themeToggle.onclick = ()=> {
   const cur = document.body.getAttribute('data-theme');
   document.body.setAttribute('data-theme', cur === 'dark' ? 'light' : 'dark');
 };
 
-/* ------------------ Load & Save entries (encrypted) ------------------ */
+// ---------- Load & Save entries (encrypted) ----------
 async function loadEntryForDate(key){
   statusText.textContent = 'Loading...';
   try {
@@ -439,7 +537,15 @@ async function loadEntryForDate(key){
 function updateEditModeForDate(key){
   const dd = new Date(key + 'T00:00:00');
   const today = new Date(); today.setHours(0,0,0,0);
-  if(dd > today){ editModeSpan.textContent = 'Future — view only'; editor.setAttribute('contenteditable','false'); saveBtn.disabled=true; } else { editModeSpan.textContent = 'Editable'; editor.setAttribute('contenteditable','true'); saveBtn.disabled=false; }
+  if(dd > today){
+    editModeSpan.textContent = 'Future — view only';
+    editor.setAttribute('contenteditable','false');
+    saveBtn.disabled = true;
+  } else {
+    editModeSpan.textContent = 'Editable';
+    editor.setAttribute('contenteditable','true');
+    saveBtn.disabled = false;
+  }
 }
 
 async function saveEntryForDate(key){
@@ -455,13 +561,13 @@ async function saveEntryForDate(key){
     await setDoc(doc(db, "entries", key), { ...enc, savedAt: serverTimestamp() });
     entriesIndex[key] = true;
     statusText.textContent = 'Saved (encrypted)';
-    // refresh month dots asynchronously (non-blocking UX)
-    loadEntriesIndexForMonth(calendarYear, calendarMonth).then(()=> renderCalendar(calendarYear, calendarMonth));
+    // refresh calendar dots asynchronously (do not block UI)
+    loadEntriesIndexForMonth(calendarYear, calendarMonth).then(()=> renderCalendar(calendarYear, calendarMonth)).catch(()=>{});
     alert('Saved!');
   } catch(e){ console.error(e); statusText.textContent='Save failed'; alert('Save failed') }
 }
 
-/* ------------------ Change password & rename (preserve original settings behavior) ------------------ */
+// ---------- Change password & rename (preserve original settings behavior) ----------
 changePassTop.onclick = async ()=> {
   const newPass = prompt('Enter new password:');
   if(!newPass) return;
@@ -479,70 +585,57 @@ renameTop.onclick = async ()=> {
   alert('Diary renamed.');
 };
 
-/* ------------------ Login flow (INSTANT swap) ------------------ */
-loginBtn.addEventListener('click', async ()=>{
-  // Immediately swap UI (instant) — hide login and show diary
-  loginDiv.style.display = 'none';
-  appRoot.style.display = 'block';
+// ---------- Login flow (shows diary instantly; heavy work runs after) ----------
+loginBtn.onclick = async () => {
+  // ensure we have latest settings before checking
+  try { await loadSettingsFromFirestore(); } catch(e){ console.warn('settings reload failed'); }
+  if(passwordInput.value === storedPassword){
+    currentPassword = passwordInput.value;
+    // hide login and show diary instantly (exact same transition style as your old script)
+    loginDiv.style.display = 'none';
+    appRoot.style.display = 'block';
 
-  // Set current password to the typed value for later encryption/decryption attempts
-  currentPassword = passwordInput.value;
+    // apply basic UI state immediately
+    diaryTitleElem.textContent = diaryName;
+    applyPageBackground(pageBackground);
+    const today = new Date();
+    calendarYear = today.getFullYear();
+    calendarMonth = today.getMonth();
+    selectedDate = toYMD(today);
+    selectedDateSpan.textContent = formatNice(today);
 
-  // Load settings (ensure storedPassword is current). We do this now — if it later differs and password mismatch, revert
-  try { await loadSettingsFromFirestore(); } catch(e){ console.warn('settings reload failed', e); }
+    // Start heavy work asynchronously so UI is not blocked:
+    // 1) load month index, then render calendar
+    // 2) then load the selected date entry (decrypt) and show
+    (async ()=>{
+      try {
+        await loadEntriesIndexForMonth(calendarYear, calendarMonth);
+        renderCalendar(calendarYear, calendarMonth);
+        await applySelectedDate(selectedDate, today);
+      } catch(e){ console.error('post-login init failed', e); }
+    })();
 
-  // If storedPassword exists and is different: validate — but we allow brief instant show, then revert if wrong
-  if(currentPassword !== storedPassword){
-    // wrong password — revert UI quickly
-    setTimeout(()=>{
-      alert('Wrong password!');
-      // hide app and show login again
-      appRoot.style.display = 'none';
-      loginDiv.style.display = 'block';
-    }, 80);
-    return;
+  } else {
+    alert('Wrong password!');
   }
+};
 
-  // password OK — continue loading diary data in background and render calendar
-  diaryTitleElem.textContent = diaryName;
-  applyPageBackground(pageBackground);
+// ---------- Month navigation ----------
+prevMonthBtn.onclick = async ()=> { calendarMonth--; if(calendarMonth<0){calendarMonth=11;calendarYear--;} loadEntriesIndexForMonth(calendarYear, calendarMonth).then(()=>renderCalendar(calendarYear, calendarMonth)).catch(()=>{}); };
+nextMonthBtn.onclick = async ()=> { calendarMonth++; if(calendarMonth>11){calendarMonth=0;calendarYear++;} loadEntriesIndexForMonth(calendarYear, calendarMonth).then(()=>renderCalendar(calendarYear, calendarMonth)).catch(()=>{}); };
 
-  const today = new Date();
-  calendarYear = today.getFullYear();
-  calendarMonth = today.getMonth();
-  selectedDate = toYMD(today);
-
-  // load index for the month (non-blocking UI; show a loading status)
-  statusText.textContent = 'Preparing...';
-  try {
-    await loadEntriesIndexForMonth(calendarYear, calendarMonth);
-    renderCalendar(calendarYear, calendarMonth);
-    await applySelectedDate(selectedDate, today);
-    statusText.textContent = 'Ready';
-  } catch(e){
-    console.warn('calendar load failed', e);
-    statusText.textContent = 'Ready';
-  }
-});
-
-/* ------------------ Month navigation ------------------ */
-prevMonthBtn.onclick = async ()=> { calendarMonth--; if(calendarMonth<0){ calendarMonth=11; calendarYear--; } await loadEntriesIndexForMonth(calendarYear, calendarMonth); renderCalendar(calendarYear, calendarMonth); };
-nextMonthBtn.onclick = async ()=> { calendarMonth++; if(calendarMonth>11){ calendarMonth=0; calendarYear++; } await loadEntriesIndexForMonth(calendarYear, calendarMonth); renderCalendar(calendarYear, calendarMonth); };
-
-/* ------------------ Save button ------------------ */
-saveBtn.onclick = async ()=> { await saveEntryForDate(selectedDate); };
-
-/* ------------------ Keyboard shortcuts ------------------ */
+// ---------- Keyboard shortcuts ----------
 document.addEventListener('keydown', (e)=> {
-  if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='b'){ e.preventDefault(); exec('bold'); }
-  if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='i'){ e.preventDefault(); exec('italic'); }
-  if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='u'){ e.preventDefault(); exec('underline'); }
+  if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b'){ e.preventDefault(); exec('bold'); }
+  if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'i'){ e.preventDefault(); exec('italic'); }
+  if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'u'){ e.preventDefault(); exec('underline'); }
 });
 
 function exec(cmd,val=null){ try{ document.execCommand(cmd,false,val); }catch(e){} editor.focus(); updateToolbarStates(); }
 
-/* ------------------ Initial lightweight preloads (non-blocking) ------------------ */
-loadEntriesIndexForMonth(calendarYear, calendarMonth).then(()=>{/*calendar initial index loaded*/}).catch(()=>{});
+// ---------- Save clicked ----------
+saveBtn.onclick = async ()=> { await saveEntryForDate(selectedDate); };
+
 </script>
 </body>
 </html>
