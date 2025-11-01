@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>My Secret Diary — Modern</title>
+<title>My Secret Diary — Modern (Polished)</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --accent:#2563eb; /* blue accent */
+    --accent:#2563eb;
     --muted:#6b7280;
     --card:#fff;
     --bg:#f4f7fb;
@@ -18,7 +18,7 @@
   *{box-sizing:border-box}
   body{ margin:0; font-family:'Quicksand',system-ui,Segoe UI,Roboto,Arial; background:var(--bg); min-height:100vh; display:flex; align-items:center; justify-content:center; padding:18px; color:#0f1720; transition: background .25s, color .25s; }
 
-  /* ---------- KEEP LOGIN EXACTLY (only slightly bigger as requested earlier) ---------- */
+  /* LOGIN (unchanged look/IDs) */
   #login {
     background: var(--card);
     border-radius: 16px;
@@ -34,9 +34,9 @@
   #login button{ background:var(--accent); color:white; border:none; cursor:pointer }
   #login button:hover{ filter:brightness(.95) }
 
-  /* ---------- APP LAYOUT ---------- */
+  /* APP layout */
   #appRoot{ display:none; width:100%; max-width:1200px; height:86vh; background:transparent; }
-  .appWrap{ display:flex; height:100%; gap:18px; align-items:stretch; }
+  .appWrap{ display:flex; height:100%; gap:18px; align-items:stretch; position:relative; }
 
   /* left calendar */
   .leftCol{
@@ -45,8 +45,7 @@
   .monthHeader{ display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px }
   .monthLabel{ font-weight:700 }
   .calendarGrid{ display:grid; grid-template-columns:repeat(7,1fr); gap:8px; }
-  .weekday{ text-align:center; font-size:12px; color:var(--muted) }
-  .dayCell{ height:44px; border-radius:10px; display:flex; align-items:center; justify-content:center; position:relative; cursor:pointer; transition: transform .08s, background .12s; }
+  .dayCell{ height:44px; border-radius:10px; display:flex; align-items:center; justify-content:center; position:relative; cursor:pointer; transition: transform .08s, background .12s; background:transparent; }
   .dayCell:hover{ transform:translateY(-3px) }
   .dayCell.today{ box-shadow: inset 0 0 0 2px rgba(37,99,235,0.08) }
   .dayCell.selected{ background:var(--accent); color:white; }
@@ -63,10 +62,8 @@
   .titleBlock .sub{ font-size:13px; color:var(--muted) }
 
   .topActions{ display:flex; gap:8px; align-items:center }
-  .squareBtn{ display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:8px 12px; border-radius:10px; border:none; background:#f8fafc; cursor:pointer; font-weight:600; color:var(--muted); min-width:90px }
+  .squareBtn{ display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:8px 12px; border-radius:10px; border:none; background:#f8fafc; cursor:pointer; font-weight:600; color:var(--muted); min-width:92px }
   .squareBtn.primary{ background:var(--accent); color:#fff; }
-  .squareBtn.warn{ background:var(--danger); color:#fff; }
-  .squareBtn:hover{ filter:brightness(.98) }
   .squareSmall{ padding:8px; min-width:44px; border-radius:10px }
 
   .toolbar{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:8px; border-radius:10px; background:rgba(10,20,40,0.03); }
@@ -78,15 +75,17 @@
   .colorPicker{ width:36px; height:36px; padding:0; border-radius:8px; border:1px solid rgba(0,0,0,0.06); cursor:pointer; background:#fff }
 
   .editorWrap{ padding:12px; border-radius:12px; border:1px solid rgba(0,0,0,0.05); min-height:420px; overflow:auto; background: rgba(255,255,255,0.85) }
-  .editorWrap[contenteditable="true"]{ cursor:text }
+  .editor{ min-height:380px; outline:none; font-size:16px; color:inherit; background:transparent; padding:8px; }
 
-  .editor{ min-height:380px; outline:none; font-size:16px; color:inherit; background:transparent; }
+  /* Save bottom-right */
+  .saveFloating{ position:absolute; right:22px; bottom:22px; z-index:40; }
 
-  .bottomRow{ display:flex; justify-content:flex-end; gap:8px; margin-top:8px; align-items:center }
+  /* remove background button style */
+  .removeBgBtn{ padding:8px 10px; border-radius:8px; border:1px solid rgba(0,0,0,0.06); background:#fff; cursor:pointer }
 
-  /* color palette popup */
+  /* palette popup */
   .palette{ position:relative; display:inline-block; }
-  .palettePopup{ position:absolute; top:44px; left:0; background:var(--card); padding:8px; border-radius:8px; display:grid; grid-template-columns: repeat(6,24px); gap:8px; box-shadow:0 8px 30px rgba(2,6,23,0.08); z-index:50 }
+  .palettePopup{ position:absolute; top:46px; left:0; background:var(--card); padding:8px; border-radius:8px; display:grid; grid-template-columns: repeat(6,24px); gap:8px; box-shadow:0 8px 30px rgba(2,6,23,0.08); z-index:50 }
   .sw{ width:24px; height:24px; border-radius:6px; cursor:pointer; border:1px solid rgba(0,0,0,0.06) }
 
   /* dark theme */
@@ -98,16 +97,16 @@
   body.dark .toolIconBtn{ background:rgba(255,255,255,0.03); color:inherit }
   body.dark .squareBtn{ background:rgba(255,255,255,0.03); color:inherit; border:1px solid rgba(255,255,255,0.04) }
 
-  /* responsive */
   @media (max-width:980px){
     .appWrap{ flex-direction:column; height:auto }
     .leftCol{ width:100%; order:2 }
     .rightCol{ order:1 }
   }
+
 </style>
 </head>
 <body>
-  <!-- LOGIN (exactly unchanged in structure & IDs) -->
+  <!-- login unchanged -->
   <div id="login">
     <h1>🔒 My Secret Diary</h1>
     <p>Enter your diary password</p>
@@ -115,19 +114,17 @@
     <button id="loginBtn">Login</button>
   </div>
 
-  <!-- APP -->
-  <div id="appRoot">
+  <!-- App -->
+  <div id="appRoot" aria-hidden="true">
     <div class="appWrap">
-      <div class="leftCol" aria-hidden="false">
+      <div class="leftCol">
         <div class="monthHeader">
           <button id="prevMonth" class="toolIconBtn" title="Previous month">◀</button>
           <div class="monthLabel" id="monthLabel">Month</div>
           <button id="nextMonth" class="toolIconBtn" title="Next month">▶</button>
         </div>
 
-        <div class="calendarGrid" id="calendarGrid">
-          <!-- grid populated by JS -->
-        </div>
+        <div class="calendarGrid" id="calendarGrid"></div>
 
         <div style="margin-top:12px; width:100%; display:flex; gap:8px; align-items:center; justify-content:space-between">
           <div style="font-size:13px; color:var(--muted)">Selected: <span id="selectedDate">—</span></div>
@@ -143,7 +140,7 @@
         <div class="topBar">
           <div class="titleBlock">
             <div class="title" id="diaryTitle">My Secret Diary</div>
-            <div class="sub">Encrypted locally • You can edit past & today</div>
+            <div class="sub">Encrypted locally • edit past & today</div>
           </div>
 
           <div class="topActions">
@@ -167,9 +164,7 @@
 
           <div class="palette">
             <button id="colorIcon" class="toolIconBtn" title="Text color">🎨</button>
-            <div class="palettePopup" id="colorPopup" style="display:none">
-              <!-- swatches filled by JS -->
-            </div>
+            <div class="palettePopup" id="colorPopup" style="display:none"></div>
           </div>
 
           <label style="margin-left:8px; font-size:13px; color:var(--muted)">Font</label>
@@ -188,9 +183,9 @@
             <option value="20px">20</option>
           </select>
 
-          <label style="margin-left:12px; font-size:13px; color:var(--muted)">Background:</label>
+          <label style="margin-left:12px; font-size:13px; color:var(--muted)">Choose Background:</label>
           <input id="bgInput" type="file" accept="image/*" style="padding:6px; border-radius:8px;" />
-
+          <button id="removeBg" class="removeBgBtn" title="Remove background">Remove</button>
         </div>
 
         <div class="editorWrap" id="editorWrap">
@@ -201,26 +196,29 @@
 
         <div class="bottomRow">
           <div id="statusText" style="font-size:13px; color:var(--muted)"></div>
-          <div style="display:flex; gap:8px">
-            <button id="saveBottom" class="squareBtn primary">Save</button>
-          </div>
         </div>
+
+        <div class="saveFloating">
+          <button id="saveFloatingBtn" class="squareBtn primary">Save</button>
+        </div>
+
       </div>
     </div>
   </div>
 
 <script type="module">
-/* --------------- Full App JS --------------- 
- - Keeps login UI & behavior unchanged.
- - Enhances main screen UI, fixes toolbar behavior, color palette, calendar, theme toggle.
- - Uses AES-GCM client-side encryption for entries.
- - Reads / writes settings at entries/settings (same mechanics).
--------------------------------------------- */
+/* PRESERVES ALL LOGIC (ENCRYPTION, FIRESTORE paths, login) — UI/UX fixes only
+   - Save bottom-right
+   - color applies to typing (styleWithCSS)
+   - highlight toggle active state
+   - no alerts/messages on save/theme
+   - Choose Background label + Remove
+*/
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
 
-// ---------- Firebase config (your provided config) ----------
+// Firebase config (unchanged)
 const firebaseConfig = {
   apiKey: "AIzaSyDRpLl01xtSZ7f0ZbId7zFASUJoem4L69s",
   authDomain: "my-secret-diary-9b62c.firebaseapp.com",
@@ -232,7 +230,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// ---------- DOM ----------
+// DOM refs
 const loginDiv = document.getElementById('login');
 const passwordInput = document.getElementById('passwordInput');
 const loginBtn = document.getElementById('loginBtn');
@@ -262,37 +260,30 @@ const colorPopup = document.getElementById('colorPopup');
 const fontSelect = document.getElementById('fontSelect');
 const sizeSelect = document.getElementById('sizeSelect');
 const bgInput = document.getElementById('bgInput');
+const removeBg = document.getElementById('removeBg');
 
 const editor = document.getElementById('editor');
-const editorWrap = document.getElementById('editorWrap');
-
-const saveBottom = document.getElementById('saveBottom');
-const statusText = document.getElementById('statusText');
+const saveFloatingBtn = document.getElementById('saveFloatingBtn');
 
 let storedPassword = "53458678";
 let diaryName = "My Secret Diary";
-let currentPassword = null; // password user types at login
+let currentPassword = null;
 let settingsMeta = { theme:'light', background:null, font:'Quicksand', size:'16px' };
 
-// calendar state
 let calendarYear = (new Date()).getFullYear();
 let calendarMonth = (new Date()).getMonth();
 let selectedDate = null;
-let entriesIndex = {}; // map date->true if saved
+let entriesIndex = {};
 
-// helper: get date in Asia/Kolkata as yyyy-mm-dd
+// timezone helper (Asia/Kolkata)
 function getYMDInTimeZone(timeZone='Asia/Kolkata', d=new Date()){
-  // Use Intl to get parts
   const parts = new Intl.DateTimeFormat('en-CA', { timeZone, year:'numeric', month:'2-digit', day:'2-digit' }).formatToParts(d);
-  const obj = {};
-  parts.forEach(p=>obj[p.type]=p.value);
+  const obj = {}; parts.forEach(p=>obj[p.type]=p.value);
   return `${obj.year}-${obj.month}-${obj.day}`;
 }
-
-// small util
 const toYMD = d => (new Date(d)).toISOString().slice(0,10);
 
-// ---------- Crypto: PBKDF2 -> AES-GCM per-entry (salt + iv) ----------
+// crypto helpers (PBKDF2 + AES-GCM)
 function b64(arr){ return btoa(String.fromCharCode(...arr)); }
 function fromB64(s){ return Uint8Array.from(atob(s), c=>c.charCodeAt(0)); }
 
@@ -301,7 +292,6 @@ async function deriveKey(password, salt) {
   const base = await crypto.subtle.importKey('raw', enc.encode(password), {name:'PBKDF2'}, false, ['deriveKey']);
   return crypto.subtle.deriveKey({ name:'PBKDF2', salt, iterations:150000, hash:'SHA-256' }, base, { name:'AES-GCM', length:256 }, false, ['encrypt','decrypt']);
 }
-
 async function encryptPayload(password, payloadObj){
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const iv = crypto.getRandomValues(new Uint8Array(12));
@@ -311,38 +301,34 @@ async function encryptPayload(password, payloadObj){
   const cipher = await crypto.subtle.encrypt({ name:'AES-GCM', iv }, key, data);
   return { cipher: b64(new Uint8Array(cipher)), iv: b64(iv), salt: b64(salt) };
 }
-
 async function decryptPayload(password, docData){
   const iv = fromB64(docData.iv);
   const salt = fromB64(docData.salt);
   const key = await deriveKey(password, salt);
   const cipherBuf = fromB64(docData.cipher);
   const plain = await crypto.subtle.decrypt({ name:'AES-GCM', iv }, key, cipherBuf);
-  const dec = new TextDecoder();
-  return JSON.parse(dec.decode(plain));
+  return JSON.parse(new TextDecoder().decode(plain));
 }
 
-// ---------- Settings load (same location as your previous scripts: entries/settings) ----------
+// settings
 async function loadSettings(){
   try{
     const sRef = doc(db, 'entries', 'settings');
     const snap = await getDoc(sRef);
     if(snap.exists()){
       const data = snap.data();
-      // previous scripts stored password plaintext in settings; preserve that behavior
       storedPassword = data.password || storedPassword;
       diaryName = data.name || diaryName;
       if(data.bg) settingsMeta.background = data.bg;
       diaryTitle.textContent = diaryName;
       applySettingsMeta();
     } else {
-      // create default
       await setDoc(sRef, { password: storedPassword, name: diaryName, bg: settingsMeta.background || "" });
     }
   } catch(e){ console.warn('loadSettings error', e) }
 }
 
-// ---------- Calendar rendering / index ----------
+// calendar index
 async function loadEntriesIndexForMonth(year, month){
   entriesIndex = {};
   const days = new Date(year, month+1, 0).getDate();
@@ -366,9 +352,7 @@ function renderCalendar(year, month){
   const daysInMonth = new Date(year, month+1, 0).getDate();
   monthLabel.textContent = first.toLocaleString(undefined,{month:'long', year:'numeric'});
   calendarGrid.innerHTML = '';
-  // weekdays header
-  // fill empty spots
-  for(let i=0;i<startWeekday;i++){ const cell = document.createElement('div'); cell.className='dayCell disabled'; calendarGrid.appendChild(cell); }
+  for(let i=0;i<startWeekday;i++){ const el=document.createElement('div'); el.className='dayCell disabled'; calendarGrid.appendChild(el); }
   for(let d=1; d<=daysInMonth; d++){
     const dt = new Date(year, month, d);
     const key = toYMD(dt);
@@ -380,50 +364,44 @@ function renderCalendar(year, month){
     cell.appendChild(dot);
     const todayKey = getYMDInTimeZone('Asia/Kolkata', new Date());
     if(key === todayKey) cell.classList.add('today');
-    cell.onclick = async ()=> {
-      await selectDate(key, dt);
-    };
+    cell.onclick = async ()=> { await selectDate(key, dt); };
     if(key === selectedDate) cell.classList.add('selected');
     calendarGrid.appendChild(cell);
   }
 }
 
-// selectDate
 async function selectDate(key, dt){
   selectedDate = key;
   selectedDateSpan.textContent = new Date(key).toLocaleDateString(undefined, { timeZone:'Asia/Kolkata' });
-  // clear selected classes and mark new one
   calendarGrid.querySelectorAll('.dayCell').forEach(c=>c.classList.remove('selected'));
-  // find cell matching day number & set selected
   calendarGrid.querySelectorAll('.dayCell').forEach(n=>{
-    if(n.textContent && n.textContent.trim() == dt.getDate()) n.classList.add('selected');
+    const txt = n.textContent && n.textContent.trim();
+    if(txt && parseInt(txt,10) === dt.getDate()) n.classList.add('selected');
   });
   await loadEntryForDate(key);
   updateEditModeForDate(key);
 }
 
-// edit mode (prevent future saves)
 function updateEditModeForDate(key){
   const dd = new Date(key + 'T00:00:00');
   const todayStr = getYMDInTimeZone('Asia/Kolkata', new Date());
   const today = new Date(todayStr + 'T00:00:00');
   if(dd > today){
     editor.setAttribute('contenteditable','false');
-    saveTop.disabled = saveBottom.disabled = true;
+    saveTop.disabled = saveFloatingBtn.disabled = true;
   } else {
     editor.setAttribute('contenteditable','true');
-    saveTop.disabled = saveBottom.disabled = false;
+    saveTop.disabled = saveFloatingBtn.disabled = false;
   }
 }
 
-// ---------- Editor toolbar behavior ----------
-// use execCommand for simplicity (works widely)
+// editor commands & persistence of styles for typing
 function exec(command, value=null){
-  document.execCommand(command, false, value);
+  try{ document.execCommand('styleWithCSS', false, true); } catch(e){}
+  try{ document.execCommand(command, false, value); } catch(e){}
   editor.focus();
   updateToolbarStates();
 }
-
 function updateToolbarStates(){
   try{
     btnBold.classList.toggle('active', document.queryCommandState('bold'));
@@ -432,11 +410,28 @@ function updateToolbarStates(){
   }catch(e){}
 }
 
+// wire toolbar
 btnBold.onclick = ()=> exec('bold');
 btnItalic.onclick = ()=> exec('italic');
 btnUnderline.onclick = ()=> exec('underline');
-btnHighlight.onclick = ()=> { try{ exec('hiliteColor', '#fff59b'); } catch(e){ exec('backColor', '#fff59b'); } };
 
+// highlight toggle
+let highlightActive = false;
+btnHighlight.onclick = ()=>{
+  highlightActive = !highlightActive;
+  if(highlightActive){
+    btnHighlight.classList.add('active');
+    exec('styleWithCSS', true);
+    exec('hiliteColor', '#fff59b');
+  } else {
+    btnHighlight.classList.remove('active');
+    // turning off: set hilite to transparent — this will affect selection/typing
+    exec('styleWithCSS', true);
+    exec('hiliteColor', 'transparent');
+  }
+};
+
+// color popup swatches
 const paletteColors = ['#000000','#333333','#555555','#8B5CF6','#2563EB','#10B981','#F59E0B','#EF4444','#FFFFFF','#FFD3B6','#BDE0FE','#FFD6F0'];
 function createColorSwatches(){
   colorPopup.innerHTML = '';
@@ -445,26 +440,31 @@ function createColorSwatches(){
     s.className = 'sw';
     s.style.background = c;
     s.title = c;
-    s.onclick = ()=> { exec('foreColor', c); colorPopup.style.display='none'; };
+    s.onclick = ()=> {
+      exec('styleWithCSS', true);
+      exec('foreColor', c);
+      colorPopup.style.display = 'none';
+      // un-highlight remove highlightActive? no — keep highlight state independent
+    };
     colorPopup.appendChild(s);
   });
 }
 createColorSwatches();
 
-colorIcon.onclick = (e)=>{
+colorIcon.onclick = (e)=> {
   colorPopup.style.display = colorPopup.style.display === 'block' ? 'none' : 'block';
 };
 
-// close color popup on outside click
+// close popups on outside click
 document.addEventListener('click', (e)=>{
   if(!colorIcon.contains(e.target) && !colorPopup.contains(e.target)) colorPopup.style.display = 'none';
 });
 
-// font & size
+// font & size control (applies to whole editor visually)
 fontSelect.onchange = ()=> editor.style.fontFamily = fontSelect.value;
 sizeSelect.onchange = ()=> editor.style.fontSize = sizeSelect.value;
 
-// editor placeholder
+// placeholder handling
 function ensurePlaceholder(){
   if(!editor.innerText.trim()){
     editor.innerHTML = '<div class="placeholder" style="color:var(--muted)">Start writing your thoughts...</div>';
@@ -477,25 +477,16 @@ editor.addEventListener('input', ()=> { ensurePlaceholder(); updateToolbarStates
 editor.addEventListener('mouseup', updateToolbarStates);
 editor.addEventListener('keyup', updateToolbarStates);
 
-// ---------- Encryption & entry load/save ----------
+// encryption wrappers
+async function encryptEntry(password, payload){ return await encryptPayload(password, payload); }
+async function decryptEntry(password, docData){ return await decryptPayload(password, docData); }
 
-// encrypt/decrypt wrappers using AES-GCM + PBKDF2 (same as earlier more secure functions)
-async function encryptEntry(password, payload){
-  // payload: { html, meta, diaryName, savedAt }
-  return await encryptPayload(password, payload);
-}
-async function decryptEntry(password, docData){
-  return await decryptPayload(password, docData);
-}
-
-// load a specific date
+// load entry for date
 async function loadEntryForDate(key){
-  statusText.textContent = 'Loading...';
   try{
     const snap = await getDoc(doc(db,'entries', key));
     if(!snap.exists()){
       editor.innerHTML = '<div class="placeholder" style="color:var(--muted)">Start writing your thoughts...</div>';
-      statusText.textContent = 'No entry';
       return;
     }
     const data = snap.data();
@@ -507,20 +498,15 @@ async function loadEntryForDate(key){
         diaryName = payload.diaryName || diaryName;
         diaryTitle.textContent = diaryName;
         applySettingsMeta();
-        statusText.textContent = 'Loaded (decrypted)';
       } catch(e){
         editor.innerHTML = '<div class="placeholder" style="color:var(--muted)">Unable to decrypt this entry (wrong password).</div>';
-        statusText.textContent = 'Decrypt failed';
       }
     } else if(data.text){
-      // legacy plaintext
       editor.innerHTML = data.text || '';
-      statusText.textContent = 'Loaded (legacy)';
     } else {
       editor.innerHTML = '<div class="placeholder" style="color:var(--muted)">Empty</div>';
-      statusText.textContent = 'Empty';
     }
-  } catch(e){ console.error('loadEntryForDate', e); statusText.textContent = 'Load error'; }
+  } catch(e){ console.error('loadEntryForDate', e) }
 }
 
 // save entry
@@ -528,32 +514,30 @@ async function saveEntryForDate(key){
   const dd = new Date(key + 'T00:00:00');
   const todayStr = getYMDInTimeZone('Asia/Kolkata', new Date());
   const today = new Date(todayStr + 'T00:00:00');
-  if(dd > today){ alert('Cannot save future entries'); return; }
+  if(dd > today) return;
   ensurePlaceholder();
   const html = editor.innerHTML;
   const payload = { html, meta: settingsMeta, diaryName, savedAt: new Date().toISOString() };
-  statusText.textContent = 'Encrypting & saving...';
   try{
     const enc = await encryptEntry(currentPassword, payload);
     await setDoc(doc(db,'entries', key), { ...enc, savedAt: serverTimestamp() });
     entriesIndex[key] = true;
-    statusText.textContent = 'Saved (encrypted)';
-    // re-render calendar dot
+    // re-render dots
     await loadEntriesIndexForMonth(calendarYear, calendarMonth);
     renderCalendar(calendarYear, calendarMonth);
-    alert('Saved!');
-  } catch(e){ console.error('saveEntryForDate', e); statusText.textContent = 'Save failed'; alert('Save failed'); }
+  } catch(e){ console.error('saveEntryForDate', e) }
 }
 
-// ---------- Settings apply (theme/background/font/size) ----------
+// apply settings (theme, bg, font, size)
 function applySettingsMeta(){
   document.body.classList.toggle('dark', settingsMeta.theme === 'dark');
+  const rc = document.querySelector('.rightCol');
   if(settingsMeta.background){
-    document.querySelector('.rightCol').style.backgroundImage = `url("${settingsMeta.background}")`;
-    document.querySelector('.rightCol').style.backgroundSize = 'cover';
-    document.querySelector('.rightCol').style.backgroundPosition = 'center';
+    rc.style.backgroundImage = `url("${settingsMeta.background}")`;
+    rc.style.backgroundSize = 'cover';
+    rc.style.backgroundPosition = 'center';
   } else {
-    document.querySelector('.rightCol').style.backgroundImage = '';
+    rc.style.backgroundImage = '';
   }
   if(settingsMeta.font) fontSelect.value = settingsMeta.font;
   if(settingsMeta.size) sizeSelect.value = settingsMeta.size;
@@ -561,19 +545,15 @@ function applySettingsMeta(){
   editor.style.fontSize = sizeSelect.value;
 }
 
-// save settings doc (store name + password + bg) — keep same mechanics as before
 async function saveSettingsDoc(){
   try{
     await setDoc(doc(db,'entries','settings'), { password: storedPassword, name: diaryName, bg: settingsMeta.background || "" });
   } catch(e){ console.error('saveSettingsDoc', e) }
 }
 
-// ---------- UI event wiring / behavior ----------
-
-// load settings on startup
+// UI events & startup
 await loadSettings();
 
-// Init calendar & selection using India timezone
 (async ()=>{
   const todayStr = getYMDInTimeZone('Asia/Kolkata', new Date());
   const today = new Date(todayStr + 'T00:00:00');
@@ -586,102 +566,64 @@ await loadSettings();
   await selectDate(selectedDate, new Date(selectedDate));
 })();
 
-// login
+// login (preserve mechanics)
 loginBtn.onclick = async ()=>{
-  // reload settings to get latest storedPassword
   await loadSettings();
   if(passwordInput.value === storedPassword){
     currentPassword = passwordInput.value;
-    // hide login, show app (mechanics same as earlier)
     loginDiv.style.display = 'none';
     appRoot.style.display = 'block';
-    // ensure UI applied
     applySettingsMeta();
-    // re-open selected
     await selectDate(selectedDate, new Date(selectedDate));
   } else {
+    // preserve original behavior (alert was used earlier) — but user asked no alerts on saves/theme. For login wrong password, keep alert.
     alert('Wrong password!');
   }
 };
 
 // prev/next month
-prevMonth.onclick = async ()=>{
-  calendarMonth--; if(calendarMonth<0){ calendarMonth=11; calendarYear--; }
-  await loadEntriesIndexForMonth(calendarYear, calendarMonth);
-  renderCalendar(calendarYear, calendarMonth);
-};
-nextMonth.onclick = async ()=>{
-  calendarMonth++; if(calendarMonth>11){ calendarMonth=0; calendarYear++; }
-  await loadEntriesIndexForMonth(calendarYear, calendarMonth);
-  renderCalendar(calendarYear, calendarMonth);
-};
-goToday.onclick = async ()=>{
-  const todayStr = getYMDInTimeZone('Asia/Kolkata', new Date());
-  calendarYear = new Date(todayStr).getFullYear();
-  calendarMonth = new Date(todayStr).getMonth();
-  await loadEntriesIndexForMonth(calendarYear, calendarMonth);
-  renderCalendar(calendarYear, calendarMonth);
-  await selectDate(todayStr, new Date(todayStr));
-};
+prevMonth.onclick = async ()=>{ calendarMonth--; if(calendarMonth<0){calendarMonth=11;calendarYear--;} await loadEntriesIndexForMonth(calendarYear, calendarMonth); renderCalendar(calendarYear, calendarMonth); };
+nextMonth.onclick = async ()=>{ calendarMonth++; if(calendarMonth>11){calendarMonth=0;calendarYear++;} await loadEntriesIndexForMonth(calendarYear, calendarMonth); renderCalendar(calendarYear, calendarMonth); };
+goToday.onclick = async ()=>{ const todayStr = getYMDInTimeZone('Asia/Kolkata', new Date()); calendarYear=new Date(todayStr).getFullYear(); calendarMonth=new Date(todayStr).getMonth(); await loadEntriesIndexForMonth(calendarYear, calendarMonth); renderCalendar(calendarYear, calendarMonth); await selectDate(todayStr, new Date(todayStr)); };
 
-// Save handlers (top & bottom)
-saveTop.onclick = saveBottom.onclick = async ()=>{
-  if(!selectedDate) return alert('No date selected');
-  await saveEntryForDate(selectedDate);
-};
+// Save handlers (silent)
+saveTop.onclick = saveFloatingBtn.onclick = async ()=>{ if(!selectedDate) return; await saveEntryForDate(selectedDate); };
 
-// Change Name button
-renameTop.onclick = async ()=>{
-  const newName = prompt('Enter new diary name:');
-  if(!newName) return;
-  diaryName = newName;
-  diaryTitle.textContent = diaryName;
-  await saveSettingsDoc();
-  alert('Diary renamed.');
-};
+// Rename (silent)
+renameTop.onclick = async ()=>{ const newName = prompt('Enter new diary name:'); if(!newName) return; diaryName = newName; diaryTitle.textContent = diaryName; await saveSettingsDoc(); };
 
-// Change Password button (keeps same mechanics: storedPassword updated in settings doc)
-changePassTop.onclick = async ()=>{
-  const newPass = prompt('Enter new password:');
-  if(!newPass) return;
-  storedPassword = newPass;
-  await saveSettingsDoc();
-  alert('Password changed for settings. (Existing entries remain encrypted with previous password until re-encrypted.)');
-};
+// Change password (silent)
+changePassTop.onclick = async ()=>{ const newPass = prompt('Enter new password:'); if(!newPass) return; storedPassword = newPass; await saveSettingsDoc(); };
 
-// Theme toggle (no moon icon): cycles light/dark; saved in settings meta for entries (but settings doc still stores bg/name/password only)
-themeToggleTop.onclick = async ()=>{
-  settingsMeta.theme = settingsMeta.theme === 'dark' ? 'light' : 'dark';
-  applySettingsMeta();
-  // Also save settings as part of entries/settings? We'll persist bg/name/password only to match earlier mechanics
-  // Save note: entries settings doc structure remains (password,name,bg) to preserve previous logic.
-  alert('Theme toggled');
-};
+// Theme toggle (no messages)
+themeToggleTop.onclick = async ()=>{ settingsMeta.theme = settingsMeta.theme === 'dark' ? 'light' : 'dark'; applySettingsMeta(); };
 
-// background upload (file from PC/mobile) - stores data URL in settingsMeta.background and saves in settings doc
+// Background upload (Choose Background) and Remove (both silent)
 bgInput.onchange = async (e)=>{
   const f = e.target.files[0];
   if(!f) return;
   const reader = new FileReader();
   reader.onload = async (ev)=>{
-    settingsMeta.background = ev.target.result; // data URL
+    settingsMeta.background = ev.target.result;
     applySettingsMeta();
-    // Persist background in settings doc (we keep previous scheme: stored in entries/settings.bg)
-    settingsMeta.background = settingsMeta.background;
-    try { await setDoc(doc(db,'entries','settings'), { password: storedPassword, name: diaryName, bg: settingsMeta.background || "" }); } catch(e){ console.error(e); }
-    alert('Background applied & saved.');
+    try{ await setDoc(doc(db,'entries','settings'), { password: storedPassword, name: diaryName, bg: settingsMeta.background || "" }); } catch(e){ console.error(e); }
   };
   reader.readAsDataURL(f);
 };
+removeBg.onclick = async ()=>{
+  settingsMeta.background = null;
+  applySettingsMeta();
+  try{ await setDoc(doc(db,'entries','settings'), { password: storedPassword, name: diaryName, bg: "" }); } catch(e){ console.error(e); }
+};
 
-// keyboard shortcuts for bold/italic/underline
+// keyboard shortcuts
 document.addEventListener('keydown', (e)=>{
   if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='b'){ e.preventDefault(); exec('bold') }
   if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='i'){ e.preventDefault(); exec('italic') }
   if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='u'){ e.preventDefault(); exec('underline') }
 });
 
-// initial placeholder
+// placeholder init
 ensurePlaceholder();
 
 </script>
