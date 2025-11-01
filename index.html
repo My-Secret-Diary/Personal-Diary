@@ -3,22 +3,15 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>My Secret Diary — Polished Fixes</title>
+<title>My Secret Diary — Polished</title>
 
-<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;700&family=Inter:wght@400&display=swap" rel="stylesheet">
 <style>
-  :root{
-    --accent:#2563eb;
-    --muted:#6b7280;
-    --card:#fff;
-    --bg:#f4f7fb;
-    --danger:#ef4444;
-    --radius:12px;
-  }
+  :root{ --accent:#2563eb; --muted:#6b7280; --card:#fff; --bg:#f4f7fb; --danger:#ef4444; --radius:12px; }
   *{box-sizing:border-box}
   body{ margin:0; font-family:'Quicksand',system-ui,Segoe UI,Roboto,Arial; background:var(--bg); min-height:100vh; display:flex; align-items:center; justify-content:center; padding:18px; color:#0f1720; transition: background .25s, color .25s; }
 
-  /* LOGIN (unchanged) */
+  /* ORIGINAL LOGIN (unchanged layout / look) */
   #login {
     background: var(--card);
     border-radius: 16px;
@@ -64,49 +57,38 @@
   .topActions{ display:flex; gap:8px; align-items:center }
   .squareBtn{ display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:8px 12px; border-radius:10px; border:none; background:#f8fafc; cursor:pointer; font-weight:600; color:var(--muted); min-width:92px }
   .squareBtn.primary{ background:var(--accent); color:#fff; }
-  .squareSmall{ padding:8px; min-width:44px; border-radius:10px }
 
   .toolbar{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:8px; border-radius:10px; background:rgba(10,20,40,0.03); }
   .toolTextBtn{ padding:8px 12px; border-radius:8px; border:1px solid rgba(0,0,0,0.06); background:#fff; cursor:pointer; font-weight:700 }
   .toolTextBtn.active{ background:var(--accent); color:#fff }
   .toolIconBtn{ width:36px; height:36px; border-radius:8px; border:1px solid rgba(0,0,0,0.06); background:#fff; display:inline-flex; align-items:center; justify-content:center; cursor:pointer }
-  .toolIconBtn.active{ background:var(--accent); color:#fff; }
+  .toolIconBtn.active{ background:var(--accent); color:#fff }
 
-  .colorPicker{ width:36px; height:36px; padding:0; border-radius:8px; border:1px solid rgba(0,0,0,0.06); cursor:pointer; background:#fff }
+  .colorPreview{ width:28px; height:20px; border-radius:6px; border:1px solid rgba(0,0,0,0.06); display:inline-block; vertical-align:middle; margin-left:6px }
 
   .editorWrap{ padding:12px; border-radius:12px; border:1px solid rgba(0,0,0,0.05); min-height:420px; overflow:auto; background: rgba(255,255,255,0.85) }
   .editor{ min-height:380px; outline:none; font-size:16px; color:inherit; background:transparent; padding:8px; }
 
-  /* Save bottom-right */
   .saveFloating{ position:absolute; right:22px; bottom:22px; z-index:40; }
 
-  /* remove background button style */
-  .removeBgBtn{ padding:8px 10px; border-radius:8px; border:1px solid rgba(0,0,0,0.06); background:#fff; cursor:pointer }
-
-  /* palette popup */
   .palette{ position:relative; display:inline-block; }
   .palettePopup{ position:absolute; top:46px; left:0; background:var(--card); padding:8px; border-radius:8px; display:grid; grid-template-columns: repeat(6,24px); gap:8px; box-shadow:0 8px 30px rgba(2,6,23,0.08); z-index:50 }
   .sw{ width:24px; height:24px; border-radius:6px; cursor:pointer; border:1px solid rgba(0,0,0,0.06) }
 
-  /* dark theme */
+  /* toast */
+  .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: 28px; min-width: 160px; padding: 10px 14px; border-radius: 10px; color: #fff; font-weight: 600; text-align:center; z-index:9999; opacity:0; pointer-events:none; transition: opacity .22s, transform .22s; }
+  .toast.show{ opacity:1; pointer-events:auto; transform: translateX(-50%) translateY(0); }
+  .toast.ok{ background:#16a34a } .toast.err{ background:#ef4444 }
+
+  /* dark */
   body.dark{ background:#071225; color:#e6eefc; }
-  body.dark .leftCol{ background:linear-gradient(180deg,#071225,#0b1420); color:#e6eefc; border-right-color:rgba(255,255,255,0.03) }
+  body.dark .leftCol{ background:linear-gradient(180deg,#071225,#0b1420); color:#e6eefc; }
   body.dark .rightCol{ background:linear-gradient(180deg,#071225,#06101a); color:#e6eefc }
-  body.dark .editorWrap{ background: rgba(255,255,255,0.02); border-color:rgba(255,255,255,0.04) }
-  body.dark .toolTextBtn{ background:rgba(255,255,255,0.03); color:inherit }
-  body.dark .toolIconBtn{ background:rgba(255,255,255,0.03); color:inherit }
-  body.dark .squareBtn{ background:rgba(255,255,255,0.03); color:inherit; border:1px solid rgba(255,255,255,0.04) }
-
-  @media (max-width:980px){
-    .appWrap{ flex-direction:column; height:auto }
-    .leftCol{ width:100%; order:2 }
-    .rightCol{ order:1 }
-  }
-
+  @media (max-width:980px){ .appWrap{ flex-direction:column; height:auto } .leftCol{ width:100%; order:2 } .rightCol{ order:1 } }
 </style>
 </head>
 <body>
-  <!-- login unchanged -->
+  <!-- LOGIN (unchanged) -->
   <div id="login">
     <h1>🔒 My Secret Diary</h1>
     <p>Enter your diary password</p>
@@ -114,7 +96,7 @@
     <button id="loginBtn">Login</button>
   </div>
 
-  <!-- App -->
+  <!-- APP -->
   <div id="appRoot" aria-hidden="true">
     <div class="appWrap">
       <div class="leftCol">
@@ -155,6 +137,7 @@
           <button id="btnBold" class="toolTextBtn" title="Bold">B</button>
           <button id="btnItalic" class="toolTextBtn" title="Italic">I</button>
           <button id="btnUnderline" class="toolTextBtn" title="Underline">U</button>
+          <button id="btnStrike" class="toolTextBtn" title="Strikethrough">S</button>
 
           <div style="width:8px"></div>
 
@@ -166,8 +149,22 @@
             <button id="colorIcon" class="toolIconBtn" title="Text color">🎨</button>
             <div class="palettePopup" id="colorPopup" style="display:none"></div>
           </div>
+          <span class="colorPreview" id="colorPreview" style="display:inline-block"></span>
 
-          <label style="margin-left:8px; font-size:13px; color:var(--muted)">Font</label>
+          <div style="width:8px"></div>
+
+          <button id="btnBullet" class="toolTextBtn" title="Bullet list">• List</button>
+          <button id="btnNumber" class="toolTextBtn" title="Numbered list">1. List</button>
+
+          <div style="width:8px"></div>
+
+          <button id="alignLeft" class="toolTextBtn" title="Align left">L</button>
+          <button id="alignCenter" class="toolTextBtn" title="Align center">C</button>
+          <button id="alignRight" class="toolTextBtn" title="Align right">R</button>
+
+          <button id="clearFmt" class="toolTextBtn" title="Clear formatting">Clear</button>
+
+          <label style="margin-left:12px; font-size:13px; color:var(--muted)">Font</label>
           <select id="fontSelect" style="padding:8px; border-radius:8px; border:1px solid rgba(0,0,0,0.06)">
             <option value="Quicksand">Quicksand</option>
             <option value="Inter">Inter</option>
@@ -183,9 +180,9 @@
             <option value="20px">20</option>
           </select>
 
-          <label style="margin-left:12px; font-size:13px; color:var(--muted)">Choose Background:</label>
+          <label style="margin-left:12px; font-size:13px; color:var(--muted)">Background</label>
           <input id="bgInput" type="file" accept="image/*" style="padding:6px; border-radius:8px;" />
-          <button id="removeBg" class="removeBgBtn" title="Remove background">Remove</button>
+          <button id="removeBg" class="squareBtn" title="Remove background">Remove</button>
         </div>
 
         <div class="editorWrap" id="editorWrap">
@@ -206,19 +203,22 @@
     </div>
   </div>
 
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
 <script type="module">
-/* Final polished script — fixes:
-   - Save works reliably (entries + background persist)
-   - Highlight toggles on/off and affects subsequent typing
-   - Color applies to selection and subsequent typing
-   - No save/theme popups (silent)
-   - Login, encryption, and Firestore paths unchanged
+/* FULL updated script:
+   - Keeps original login UI and how app appears
+   - Fixes highlight/color selection vs typing behavior
+   - Adds more formatting buttons
+   - Persists background and settings
+   - Uses the same encryption (PBKDF2 + AES-GCM)
+   - Calendar uses Asia/Kolkata timezone (so Today matches India)
 */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
 
-// Firebase config
+// Firebase config (unchanged)
 const firebaseConfig = {
   apiKey: "AIzaSyDRpLl01xtSZ7f0ZbId7zFASUJoem4L69s",
   authDomain: "my-secret-diary-9b62c.firebaseapp.com",
@@ -230,7 +230,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// DOM refs
+// DOM
 const loginDiv = document.getElementById('login');
 const passwordInput = document.getElementById('passwordInput');
 const loginBtn = document.getElementById('loginBtn');
@@ -252,10 +252,19 @@ const themeToggleTop = document.getElementById('themeToggleTop');
 const btnBold = document.getElementById('btnBold');
 const btnItalic = document.getElementById('btnItalic');
 const btnUnderline = document.getElementById('btnUnderline');
+const btnStrike = document.getElementById('btnStrike');
 const btnHighlight = document.getElementById('btnHighlight');
 
 const colorIcon = document.getElementById('colorIcon');
 const colorPopup = document.getElementById('colorPopup');
+const colorPreview = document.getElementById('colorPreview');
+
+const btnBullet = document.getElementById('btnBullet');
+const btnNumber = document.getElementById('btnNumber');
+const alignLeft = document.getElementById('alignLeft');
+const alignCenter = document.getElementById('alignCenter');
+const alignRight = document.getElementById('alignRight');
+const clearFmt = document.getElementById('clearFmt');
 
 const fontSelect = document.getElementById('fontSelect');
 const sizeSelect = document.getElementById('sizeSelect');
@@ -264,6 +273,8 @@ const removeBg = document.getElementById('removeBg');
 
 const editor = document.getElementById('editor');
 const saveFloatingBtn = document.getElementById('saveFloatingBtn');
+
+const toastEl = document.getElementById('toast');
 
 let storedPassword = "53458678";
 let diaryName = "My Secret Diary";
@@ -275,12 +286,52 @@ let calendarMonth = (new Date()).getMonth();
 let selectedDate = null;
 let entriesIndex = {};
 
-// for subsequent typing color/highlight handling
-let currentColor = null;
-let highlightActive = false;
+// color/highlight state for subsequent typing
+let currentColor = null;          // e.g. "#ff0000"
+let highlightActive = false;      // true if highlight should apply to typed chars
 const highlightColor = '#fff59b';
 
-// timezone helper (Asia/Kolkata)
+// palette
+const paletteColors = ['#000000','#333333','#555555','#8B5CF6','#2563EB','#10B981','#F59E0B','#EF4444','#FFFFFF','#FFD3B6','#BDE0FE','#FFD6F0'];
+function createColorSwatches(){
+  colorPopup.innerHTML = '';
+  paletteColors.forEach(c=>{
+    const s = document.createElement('div');
+    s.className='sw';
+    s.style.background = c;
+    s.title = c;
+    s.onclick = ()=>{
+      // Apply to selection if any
+      try{ document.execCommand('styleWithCSS', false, true); }catch(e){}
+      try{ document.execCommand('foreColor', false, c); }catch(e){}
+      // Also set typing color
+      currentColor = c;
+      colorPreview.style.background = c;
+      colorPreview.title = c;
+      colorPopup.style.display = 'none';
+      colorIcon.classList.add('active');
+    };
+    colorPopup.appendChild(s);
+  });
+}
+createColorSwatches();
+colorIcon.onclick = ()=> { colorPopup.style.display = colorPopup.style.display === 'block' ? 'none' : 'block'; };
+
+// close popup on outside click
+document.addEventListener('click', e => {
+  if(!colorIcon.contains(e.target) && !colorPopup.contains(e.target)) colorPopup.style.display = 'none';
+});
+
+// toast
+let toastTimer = null;
+function showToast(msg, ok=true){
+  toastEl.textContent = msg;
+  toastEl.className = `toast ${ok ? 'ok' : 'err'} show`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=> { toastEl.className = 'toast'; }, 1800);
+}
+
+// timezone helper (India)
 function getYMDInTimeZone(timeZone='Asia/Kolkata', d=new Date()){
   const parts = new Intl.DateTimeFormat('en-CA', { timeZone, year:'numeric', month:'2-digit', day:'2-digit' }).formatToParts(d);
   const obj = {}; parts.forEach(p=>obj[p.type]=p.value);
@@ -315,25 +366,29 @@ async function decryptPayload(password, docData){
   return JSON.parse(new TextDecoder().decode(plain));
 }
 
-// settings
+// load settings doc
 async function loadSettings(){
   try{
     const sRef = doc(db, 'entries', 'settings');
     const snap = await getDoc(sRef);
     if(snap.exists()){
       const data = snap.data();
+      // support both plain settings (legacy) and bg field
       storedPassword = data.password || storedPassword;
       diaryName = data.name || diaryName;
       if(data.bg) settingsMeta.background = data.bg;
       diaryTitle.textContent = diaryName;
       applySettingsMeta();
     } else {
+      // create default settings
       await setDoc(sRef, { password: storedPassword, name: diaryName, bg: settingsMeta.background || "" });
     }
-  } catch(e){ console.warn('loadSettings error', e) }
+  } catch(e){
+    console.warn('loadSettings error', e);
+  }
 }
 
-// calendar index
+// calendar index for month
 async function loadEntriesIndexForMonth(year, month){
   entriesIndex = {};
   const days = new Date(year, month+1, 0).getDate();
@@ -350,6 +405,7 @@ async function loadEntriesIndexForMonth(year, month){
   await Promise.all(promises);
 }
 
+// render calendar
 function renderCalendar(year, month){
   calendarYear = year; calendarMonth = month;
   const first = new Date(year, month, 1);
@@ -375,6 +431,7 @@ function renderCalendar(year, month){
   }
 }
 
+// selection/date handling
 async function selectDate(key, dt){
   selectedDate = key;
   selectedDateSpan.textContent = new Date(key).toLocaleDateString(undefined, { timeZone:'Asia/Kolkata' });
@@ -386,7 +443,6 @@ async function selectDate(key, dt){
   await loadEntryForDate(key);
   updateEditModeForDate(key);
 }
-
 function updateEditModeForDate(key){
   const dd = new Date(key + 'T00:00:00');
   const todayStr = getYMDInTimeZone('Asia/Kolkata', new Date());
@@ -400,13 +456,13 @@ function updateEditModeForDate(key){
   }
 }
 
-// ensure styleWithCSS enabled for execCommand usage
+// enable styleWithCSS where supported
 try{ document.execCommand('styleWithCSS', false, true); } catch(e){}
 
-// editor commands & toolbar state
-function exec(command, value=null){
+// toolbar exec + state
+function execCmd(cmd, value=null){
   try{ document.execCommand('styleWithCSS', false, true); } catch(e){}
-  try{ document.execCommand(command, false, value); } catch(e){}
+  try{ document.execCommand(cmd, false, value); } catch(e){ console.warn('exec failed', cmd, e) }
   editor.focus();
   updateToolbarStates();
 }
@@ -415,58 +471,73 @@ function updateToolbarStates(){
     btnBold.classList.toggle('active', document.queryCommandState('bold'));
     btnItalic.classList.toggle('active', document.queryCommandState('italic'));
     btnUnderline.classList.toggle('active', document.queryCommandState('underline'));
+    btnStrike.classList.toggle('active', document.queryCommandState('strikeThrough'));
+    // highlight cannot be reliably read, so it is managed by highlightActive
+    btnHighlight.classList.toggle('active', highlightActive);
+    // color icon active if currentColor set
+    colorIcon.classList.toggle('active', !!currentColor);
+    if(currentColor) colorPreview.style.background = currentColor; else colorPreview.style.background = '';
   }catch(e){}
 }
 
-btnBold.onclick = ()=> exec('bold');
-btnItalic.onclick = ()=> exec('italic');
-btnUnderline.onclick = ()=> exec('underline');
+btnBold.onclick = ()=> execCmd('bold');
+btnItalic.onclick = ()=> execCmd('italic');
+btnUnderline.onclick = ()=> execCmd('underline');
+btnStrike.onclick = ()=> execCmd('strikeThrough');
 
-// highlight toggle (visual + affects subsequent typing via beforeinput handler)
+btnBullet.onclick = ()=> execCmd('insertUnorderedList');
+btnNumber.onclick = ()=> execCmd('insertOrderedList');
+
+alignLeft.onclick = ()=> execCmd('justifyLeft');
+alignCenter.onclick = ()=> execCmd('justifyCenter');
+alignRight.onclick = ()=> execCmd('justifyRight');
+
+clearFmt.onclick = ()=> execCmd('removeFormat');
+
+// Highlight toggle: if selection exists apply to selection and set active state for typing.
+// If no selection, just toggle highlightActive to affect later typing.
 btnHighlight.onclick = ()=>{
   highlightActive = !highlightActive;
   btnHighlight.classList.toggle('active', highlightActive);
-  // when turning off, nothing to do because beforeinput will check highlightActive
+  const sel = window.getSelection();
+  if(sel && sel.rangeCount){
+    // apply highlight to selection if any
+    try{ document.execCommand('styleWithCSS', false, true); } catch(e){}
+    try{ document.execCommand('hiliteColor', false, highlightColor); }catch(e){
+      try{ document.execCommand('backColor', false, highlightColor); }catch(e){}
+    }
+  }
 };
 
-// color swatches
-const paletteColors = ['#000000','#333333','#555555','#8B5CF6','#2563EB','#10B981','#F59E0B','#EF4444','#FFFFFF','#FFD3B6','#BDE0FE','#FFD6F0'];
-function createColorSwatches(){
-  colorPopup.innerHTML = '';
-  paletteColors.forEach(c=>{
-    const s = document.createElement('div');
-    s.className = 'sw';
-    s.style.background = c;
-    s.title = c;
-    s.onclick = ()=> {
-      // apply to selection immediately
-      try{ document.execCommand('styleWithCSS', false, true); } catch(e){}
-      try{ document.execCommand('foreColor', false, c); } catch(e){}
-      // set as currentColor for subsequent typing
-      currentColor = c;
-      colorPopup.style.display = 'none';
-      // visually mark colorIcon active (no persistent color square)
-      colorIcon.classList.add('active');
-    };
-    colorPopup.appendChild(s);
-  });
-}
-createColorSwatches();
+// text color swatches already set to apply selection and set currentColor for typing
 
-colorIcon.onclick = (e)=> {
-  colorPopup.style.display = colorPopup.style.display === 'block' ? 'none' : 'block';
-};
-
-// close color popup on outside click
-document.addEventListener('click', (e)=>{
-  if(!colorIcon.contains(e.target) && !colorPopup.contains(e.target)) colorPopup.style.display = 'none';
+// apply colors and highlight while typing when caret, using beforeinput
+editor.addEventListener('beforeinput', (e)=>{
+  if(e.inputType === 'insertText' && e.data && e.data.length > 0){
+    const sel = window.getSelection();
+    if(!sel.rangeCount) return;
+    const range = sel.getRangeAt(0);
+    if(!range.collapsed) return; // selection present -> execCommand handled elsewhere
+    // if no styling needed, let browser do it
+    if(!highlightActive && !currentColor) return;
+    e.preventDefault();
+    const span = document.createElement('span');
+    if(currentColor) span.style.color = currentColor;
+    if(highlightActive) span.style.backgroundColor = highlightColor;
+    span.textContent = e.data;
+    range.insertNode(span);
+    // place caret after inserted span
+    range.setStartAfter(span);
+    range.setEndAfter(span);
+    sel.removeAllRanges();
+    sel.addRange(range);
+    updateToolbarStates();
+  }
 });
 
-// font & size
-fontSelect.onchange = ()=> editor.style.fontFamily = fontSelect.value;
-sizeSelect.onchange = ()=> editor.style.fontSize = sizeSelect.value;
+// when a selection exists and user chooses a color from palette, execCommand('foreColor', color) applied in swatch handler above
 
-// placeholder
+// placeholder behavior
 function ensurePlaceholder(){
   if(!editor.innerText.trim()){
     editor.innerHTML = '<div class="placeholder" style="color:var(--muted)">Start writing your thoughts...</div>';
@@ -475,44 +546,14 @@ function ensurePlaceholder(){
     if(ph) ph.remove();
   }
 }
-editor.addEventListener('input', ()=> { ensurePlaceholder(); updateToolbarStates(); });
+editor.addEventListener('input', ()=>{ ensurePlaceholder(); updateToolbarStates(); });
 editor.addEventListener('mouseup', updateToolbarStates);
 editor.addEventListener('keyup', updateToolbarStates);
 
-// beforeinput handler — ensures subsequent typing uses selected color/highlight even when selection is collapsed
-editor.addEventListener('beforeinput', (e)=>{
-  // only handle typed characters
-  if(e.inputType === 'insertText' && e.data && e.data.length > 0){
-    const sel = window.getSelection();
-    if(!sel.rangeCount) return;
-    const range = sel.getRangeAt(0);
-    if(!range.collapsed) return; // let execCommand handle selection cases
-    // if neither highlightActive nor currentColor set, let browser handle
-    if(!highlightActive && !currentColor) return;
-    // intercept and insert styled span
-    e.preventDefault();
-    const span = document.createElement('span');
-    if(currentColor) span.style.color = currentColor;
-    if(highlightActive) span.style.backgroundColor = highlightColor;
-    // preserve typing whitespace/newline behavior
-    span.textContent = e.data;
-    range.insertNode(span);
-    // move caret after inserted node
-    range.setStartAfter(span);
-    range.setEndAfter(span);
-    sel.removeAllRanges();
-    sel.addRange(range);
-    // update
-    ensurePlaceholder();
-    updateToolbarStates();
-  }
-});
-
-// encryption helpers
+// encrypt/decrypt helpers (use same functions)
 async function encryptEntry(password, payload){ return await encryptPayload(password, payload); }
 async function decryptEntry(password, docData){ return await decryptPayload(password, docData); }
 
-// load entry
 async function loadEntryForDate(key){
   try{
     const snap = await getDoc(doc(db,'entries', key));
@@ -540,12 +581,12 @@ async function loadEntryForDate(key){
   } catch(e){ console.error('loadEntryForDate', e) }
 }
 
-// save entry (silently, no alerts)
+// save entry (saves encrypted html)
 async function saveEntryForDate(key){
   const dd = new Date(key + 'T00:00:00');
   const todayStr = getYMDInTimeZone('Asia/Kolkata', new Date());
   const today = new Date(todayStr + 'T00:00:00');
-  if(dd > today) return;
+  if(dd > today) { showToast('Cannot save future entries', false); return false; }
   ensurePlaceholder();
   const html = editor.innerHTML;
   const payload = { html, meta: settingsMeta, diaryName, savedAt: new Date().toISOString() };
@@ -553,13 +594,18 @@ async function saveEntryForDate(key){
     const enc = await encryptEntry(currentPassword, payload);
     await setDoc(doc(db,'entries', key), { ...enc, savedAt: serverTimestamp() });
     entriesIndex[key] = true;
-    // re-render dots silently
     await loadEntriesIndexForMonth(calendarYear, calendarMonth);
     renderCalendar(calendarYear, calendarMonth);
-  } catch(e){ console.error('saveEntryForDate', e) }
+    showToast('Saved', true);
+    return true;
+  } catch(e){
+    console.error('saveEntryForDate', e);
+    showToast('Save failed', false);
+    return false;
+  }
 }
 
-// apply settings meta (theme/bg/font/size)
+// apply settings meta (theme/back/font/size)
 function applySettingsMeta(){
   document.body.classList.toggle('dark', settingsMeta.theme === 'dark');
   const rc = document.querySelector('.rightCol');
@@ -567,29 +613,32 @@ function applySettingsMeta(){
     rc.style.backgroundImage = `url("${settingsMeta.background}")`;
     rc.style.backgroundSize = 'cover';
     rc.style.backgroundPosition = 'center';
-  } else {
-    rc.style.backgroundImage = '';
-  }
+  } else rc.style.backgroundImage = '';
   if(settingsMeta.font) fontSelect.value = settingsMeta.font;
   if(settingsMeta.size) sizeSelect.value = settingsMeta.size;
   editor.style.fontFamily = fontSelect.value;
   editor.style.fontSize = sizeSelect.value;
 }
 
-async function saveSettingsDoc(){
+// save settings document (bg, name, password)
+async function saveSettingsDoc(showToastMsg=false){
   try{
     await setDoc(doc(db,'entries','settings'), { password: storedPassword, name: diaryName, bg: settingsMeta.background || "" });
-  } catch(e){ console.error('saveSettingsDoc', e) }
+    if(showToastMsg) showToast('Settings saved', true);
+    return true;
+  } catch(e){
+    console.error('saveSettingsDoc', e);
+    if(showToastMsg) showToast('Settings save failed', false);
+    return false;
+  }
 }
 
-// settings load & calendar init
+// load settings + init calendar
 await loadSettings();
-
 (async ()=>{
   const todayStr = getYMDInTimeZone('Asia/Kolkata', new Date());
-  const today = new Date(todayStr + 'T00:00:00');
-  calendarYear = today.getFullYear();
-  calendarMonth = today.getMonth();
+  calendarYear = new Date(todayStr).getFullYear();
+  calendarMonth = new Date(todayStr).getMonth();
   selectedDate = todayStr;
   selectedDateSpan.textContent = new Date(selectedDate).toLocaleDateString(undefined,{timeZone:'Asia/Kolkata'});
   await loadEntriesIndexForMonth(calendarYear, calendarMonth);
@@ -597,7 +646,7 @@ await loadSettings();
   await selectDate(selectedDate, new Date(selectedDate));
 })();
 
-// login (behavior unchanged)
+// login flow (keeps original behavior)
 loginBtn.onclick = async ()=>{
   await loadSettings();
   if(passwordInput.value === storedPassword){
@@ -611,24 +660,22 @@ loginBtn.onclick = async ()=>{
   }
 };
 
-// month nav, today
+// month nav
 prevMonth.onclick = async ()=>{ calendarMonth--; if(calendarMonth<0){calendarMonth=11;calendarYear--;} await loadEntriesIndexForMonth(calendarYear, calendarMonth); renderCalendar(calendarYear, calendarMonth); };
 nextMonth.onclick = async ()=>{ calendarMonth++; if(calendarMonth>11){calendarMonth=0;calendarYear++;} await loadEntriesIndexForMonth(calendarYear, calendarMonth); renderCalendar(calendarYear, calendarMonth); };
 goToday.onclick = async ()=>{ const todayStr = getYMDInTimeZone('Asia/Kolkata', new Date()); calendarYear=new Date(todayStr).getFullYear(); calendarMonth=new Date(todayStr).getMonth(); await loadEntriesIndexForMonth(calendarYear, calendarMonth); renderCalendar(calendarYear, calendarMonth); await selectDate(todayStr, new Date(todayStr)); };
 
-// save handlers (silent)
+// save buttons
 saveTop.onclick = saveFloatingBtn.onclick = async ()=>{ if(!selectedDate) return; await saveEntryForDate(selectedDate); };
 
-// rename (silent)
-renameTop.onclick = async ()=>{ const newName = prompt('Enter new diary name:'); if(!newName) return; diaryName = newName; diaryTitle.textContent = diaryName; await saveSettingsDoc(); };
+// rename & pass
+renameTop.onclick = async ()=>{ const newName = prompt('Enter new diary name:'); if(!newName) return; diaryName = newName; diaryTitle.textContent = diaryName; await saveSettingsDoc(true); };
+changePassTop.onclick = async ()=>{ const newPass = prompt('Enter new password:'); if(!newPass) return; storedPassword = newPass; await saveSettingsDoc(true); };
 
-// change pass (silent)
-changePassTop.onclick = async ()=>{ const newPass = prompt('Enter new password:'); if(!newPass) return; storedPassword = newPass; await saveSettingsDoc(); };
-
-// theme toggle (silent)
+// theme toggle (no alerts)
 themeToggleTop.onclick = async ()=>{ settingsMeta.theme = settingsMeta.theme === 'dark' ? 'light' : 'dark'; applySettingsMeta(); };
 
-// background upload & remove (silent)
+// background upload -> read as dataURL and save in settings
 bgInput.onchange = async (e)=>{
   const f = e.target.files[0];
   if(!f) return;
@@ -636,25 +683,28 @@ bgInput.onchange = async (e)=>{
   reader.onload = async (ev)=>{
     settingsMeta.background = ev.target.result;
     applySettingsMeta();
-    try{ await setDoc(doc(db,'entries','settings'), { password: storedPassword, name: diaryName, bg: settingsMeta.background || "" }); } catch(e){ console.error(e); }
+    const ok = await saveSettingsDoc(true);
+    if(!ok) showToast('Background save failed', false);
   };
   reader.readAsDataURL(f);
 };
 removeBg.onclick = async ()=>{
   settingsMeta.background = null;
   applySettingsMeta();
-  try{ await setDoc(doc(db,'entries','settings'), { password: storedPassword, name: diaryName, bg: "" }); } catch(e){ console.error(e); }
+  const ok = await saveSettingsDoc(true);
+  if(!ok) showToast('Remove background failed', false);
 };
 
 // keyboard shortcuts
 document.addEventListener('keydown', (e)=>{
-  if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='b'){ e.preventDefault(); exec('bold') }
-  if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='i'){ e.preventDefault(); exec('italic') }
-  if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='u'){ e.preventDefault(); exec('underline') }
+  if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='b'){ e.preventDefault(); execCmd('bold'); }
+  if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='i'){ e.preventDefault(); execCmd('italic'); }
+  if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='u'){ e.preventDefault(); execCmd('underline'); }
 });
 
-// placeholder
+// initial placeholder
 ensurePlaceholder();
+updateToolbarStates();
 
 </script>
 </body>
