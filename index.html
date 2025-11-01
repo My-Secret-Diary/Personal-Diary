@@ -85,7 +85,7 @@ display=swap" rel="stylesheet">
   .colorPreview{ width:28px; height:20px; border-radius:6px; border:1px solid rgba(0,0,0,0.06); display:inline-block; vertical-align:middle; margin-left:6px }
 
   .editorWrap{ padding:12px; border-radius:12px; border:1px solid rgba(0,0,0,0.05); min-height:480px; overflow:auto; background: rgba(255,255,255,0.85) }
-  .editor{ min-height:420px; outline:none; font-size:16px; color:inherit; background:transparent; padding:12px; white-space:pre-wrap }
+  .editor{ min-height:420px; outline:none; font-size:16px; color:inherit; background:transparent; padding:12px; }
 
   .saveFloating{ position:absolute; right:22px; bottom:22px; z-index:40; }
 
@@ -116,7 +116,7 @@ display=swap" rel="stylesheet">
   </div>
 
   <!-- APP -->
-  <div id="appRoot" aria-hidden="true" style="display:none">
+  <div id="appRoot" aria-hidden="true">
     <div class="appWrap">
       <div class="leftCol">
         <div class="monthHeader">
@@ -232,7 +232,6 @@ display=swap" rel="stylesheet">
    - Save/load encrypted HTML to Firestore at doc path: entries/YYYY-MM-DD
    - Settings saved at entries/settings (bg, name, password)
    - Calendar uses Asia/Kolkata timezone
-   - fixes: Enter->Login, composition (IME), placeholder focus removal
 */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
@@ -312,11 +311,6 @@ let currentColor = null;
 let highlightActive = false;
 const highlightColor = '#fff59b';
 
-// IME composition flag so we don't break multi-key input
-let isComposing = false;
-editor.addEventListener('compositionstart', ()=> { isComposing = true; });
-editor.addEventListener('compositionend', ()=> { isComposing = false; });
-
 // palette
 const paletteColors = ['#000000','#333333','#555555','#8B5CF6','#2563EB','#10B981','#F59E0B','#EF4444','#FFFFFF','#FFD3B6','#BDE0FE','#FFD6F0'];
 function createColorSwatches(){
@@ -326,18 +320,14 @@ function createColorSwatches(){
     s.className='sw';
     s.style.background = c;
     s.title = c;
-    s.onclick = ()=> {
-      // Apply to selection if any
+    s.onclick = ()=>{
       try{ document.execCommand('styleWithCSS', false, true); }catch(e){}
       try{ document.execCommand('foreColor', false, c); }catch(e){}
-      // Also set typing color
       currentColor = c;
       colorPreview.style.background = c;
       colorPreview.title = c;
       colorPopup.style.display = 'none';
       colorIcon.classList.add('active');
-      updateToolbarStates();
-      editor.focus();
     };
     colorPopup.appendChild(s);
   });
@@ -518,7 +508,7 @@ alignRight.onclick = ()=> execCmd('justifyRight');
 
 clearFmt.onclick = ()=> execCmd('removeFormat');
 
-btnHighlight.onclick = ()=> {
+btnHighlight.onclick = ()=>{
   highlightActive = !highlightActive;
   btnHighlight.classList.toggle('active', highlightActive);
   const sel = window.getSelection();
@@ -526,18 +516,16 @@ btnHighlight.onclick = ()=> {
     try{ document.execCommand('styleWithCSS', false, true); }catch(e){}
     try{ document.execCommand('hiliteColor', false, highlightColor); }catch(e){ try{ document.execCommand('backColor', false, highlightColor); }catch(e){} }
   }
-  editor.focus();
 };
 
 // beforeinput intercept so typing applies currentColor/highlight when caret collapsed
 editor.addEventListener('beforeinput', (e)=>{
-  if(isComposing) return; // don't intercept while IME composing
   if(e.inputType === 'insertText' && e.data && e.data.length > 0){
     const sel = window.getSelection();
     if(!sel.rangeCount) return;
     const range = sel.getRangeAt(0);
-    if(!range.collapsed) return; // selection present -> execCommand will apply
-    if(!highlightActive && !currentColor) return; // nothing special; let browser do default
+    if(!range.collapsed) return;
+    if(!highlightActive && !currentColor) return; // nothing special
     e.preventDefault();
     const span = document.createElement('span');
     if(currentColor) span.style.color = currentColor;
@@ -556,9 +544,7 @@ editor.addEventListener('beforeinput', (e)=>{
 // placeholder management
 function ensurePlaceholder(){
   if(!editor.innerText.trim()){
-    if(!editor.querySelector('.placeholder')){
-      editor.innerHTML = '<div class="placeholder" style="color:var(--muted)">Start writing your thoughts...</div>';
-    }
+    editor.innerHTML = '<div class="placeholder" style="color:var(--muted)">Start writing your thoughts...</div>';
   } else {
     const ph = editor.querySelector('.placeholder');
     if(ph) ph.remove();
@@ -567,13 +553,6 @@ function ensurePlaceholder(){
 editor.addEventListener('input', ()=>{ ensurePlaceholder(); updateToolbarStates(); });
 editor.addEventListener('mouseup', updateToolbarStates);
 editor.addEventListener('keyup', updateToolbarStates);
-
-// when focusing editor, remove placeholder so typing is straightforward
-editor.addEventListener('focus', ()=> {
-  const ph = editor.querySelector('.placeholder');
-  if(ph) ph.remove();
-  updateToolbarStates();
-});
 
 // fonts list (many popular fonts). We added Google font links above to load them.
 const FONTS = [
@@ -692,23 +671,6 @@ async function saveSettingsDoc(showToastMsg=false){
   }
 }
 
-// load entries index utility used earlier
-async function loadEntriesIndexForMonth(year, month){
-  entriesIndex = {};
-  const days = new Date(year, month+1, 0).getDate();
-  const promises = [];
-  for(let d=1; d<=days; d++){
-    const key = toYMD(new Date(year, month, d));
-    promises.push((async ()=>{
-      try{
-        const snap = await getDoc(doc(db,'entries', key));
-        if(snap.exists()) entriesIndex[key] = true;
-      }catch(e){}
-    })());
-  }
-  await Promise.all(promises);
-}
-
 // INITIALIZE: load settings and calendar
 await loadSettings();
 (async ()=>{
@@ -723,11 +685,6 @@ await loadSettings();
 })();
 
 // LOGIN FLOW (keeps original appearance & mechanics)
-// Add Enter key to trigger login
-passwordInput.addEventListener('keydown', (e)=>{
-  if(e.key === 'Enter'){ e.preventDefault(); loginBtn.click(); }
-});
-
 loginBtn.onclick = async ()=>{
   await loadSettings();
   if(passwordInput.value === storedPassword){
@@ -767,7 +724,12 @@ bgInput.onchange = async (e)=>{
   };
   reader.readAsDataURL(f);
 };
-removeBg.onclick = async ()=>{ settingsMeta.background = null; applySettingsMeta(); const ok = await saveSettingsDoc(false); if(!ok) showToast('Remove background failed', false); };
+removeBg.onclick = async ()=>{
+  settingsMeta.background = null;
+  applySettingsMeta();
+  const ok = await saveSettingsDoc(false);
+  if(!ok) showToast('Remove background failed', false);
+};
 
 // keyboard shortcuts
 document.addEventListener('keydown', (e)=>{
