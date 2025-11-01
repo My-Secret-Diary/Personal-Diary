@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Secret Diary</title>
+  <style>
+    body {
+      font-family: "Poppins", sans-serif;
+      background: #f7f6f3;
+      margin: 0;
+      padding: 0;
+      color: #333;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    #login, #diary {
+      background: white;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.15);
+      border-radius: 15px;
+      padding: 30px;
+      width: 90%;
+      max-width: 500px;
+      display: none;
+    }
+
+    #login.active, #diary.active {
+      display: block;
+    }
+
+    h1 {
+      text-align: center;
+      color: #3a3a3a;
+    }
+
+    input, textarea, select, button {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      margin: 8px 0;
+      font-size: 16px;
+      font-family: inherit;
+    }
+
+    button {
+      background: #4cafef;
+      border: none;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #3b9bdc;
+    }
+
+    .options {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+    }
+
+    .calendar {
+      margin: 10px 0;
+    }
+
+    textarea {
+      min-height: 150px;
+      resize: vertical;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="login" class="active">
+    <h1>🔒 My Secret Diary</h1>
+    <p>Enter password to unlock:</p>
+    <input type="password" id="passwordInput" placeholder="Enter password" />
+    <button id="loginBtn">Unlock</button>
+  </div>
+
+  <div id="diary">
+    <h1 id="diaryTitle">My Secret Diary</h1>
+
+    <div class="options">
+      <button id="changeNameBtn">📝 Change Name</button>
+      <button id="changePassBtn">🔑 Change Password</button>
+    </div>
+
+    <div class="calendar">
+      <label for="datePicker"><b>Select Date:</b></label>
+      <input type="date" id="datePicker" />
+    </div>
+
+    <textarea id="diaryEntry" placeholder="Write your thoughts here..."></textarea>
+    <button id="saveBtn">💾 Save Entry</button>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    // Import Firebase
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+    import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+    // Your Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyDRpLl01xtSZ7f0ZbId7zFASUJoem4L69s",
+      authDomain: "my-secret-diary-9b62c.firebaseapp.com",
+      projectId: "my-secret-diary-9b62c",
+      storageBucket: "my-secret-diary-9b62c.firebasestorage.app",
+      messagingSenderId: "139353851381",
+      appId: "1:139353851381:web:3050a47540d36a2243ccbc"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // Default password
+    let currentPassword = "53458678";
+    let diaryName = "My Secret Diary";
+
+    // Elements
+    const loginDiv = document.getElementById("login");
+    const diaryDiv = document.getElementById("diary");
+    const loginBtn = document.getElementById("loginBtn");
+    const passwordInput = document.getElementById("passwordInput");
+    const diaryTitle = document.getElementById("diaryTitle");
+    const changeNameBtn = document.getElementById("changeNameBtn");
+    const changePassBtn = document.getElementById("changePassBtn");
+    const datePicker = document.getElementById("datePicker");
+    const diaryEntry = document.getElementById("diaryEntry");
+    const saveBtn = document.getElementById("saveBtn");
+
+    const diaryRef = doc(db, "diary", "main");
+
+    // Load saved data
+    async function loadDiaryData() {
+      const snap = await getDoc(diaryRef);
+      if (snap.exists()) {
+        const data = snap.data();
+        if (data.password) currentPassword = data.password;
+        if (data.name) diaryName = data.name;
+        diaryTitle.textContent = diaryName;
+      } else {
+        await setDoc(diaryRef, {
+          password: currentPassword,
+          name: diaryName,
+          entries: {}
+        });
+      }
+    }
+
+    // Login
+    loginBtn.onclick = async () => {
+      await loadDiaryData();
+      if (passwordInput.value === currentPassword) {
+        loginDiv.classList.remove("active");
+        diaryDiv.classList.add("active");
+        alert("Welcome to your diary 💖");
+      } else {
+        alert("❌ Incorrect password!");
+      }
+    };
+
+    // Save diary entry
+    saveBtn.onclick = async () => {
+      const date = datePicker.value;
+      if (!date) return alert("Please select a date!");
+      const snap = await getDoc(diaryRef);
+      const data = snap.data();
+      data.entries[date] = diaryEntry.value;
+      await setDoc(diaryRef, data);
+      alert("✅ Entry saved!");
+    };
+
+    // Load entry for date
+    datePicker.onchange = async () => {
+      const date = datePicker.value;
+      const snap = await getDoc(diaryRef);
+      const data = snap.data();
+      diaryEntry.value = data.entries[date] || "";
+    };
+
+    // Change diary name
+    changeNameBtn.onclick = async () => {
+      const newName = prompt("Enter new diary name:", diaryName);
+      if (!newName) return;
+      diaryName = newName;
+      diaryTitle.textContent = newName;
+      const snap = await getDoc(diaryRef);
+      const data = snap.data();
+      data.name = newName;
+      await setDoc(diaryRef, data);
+      alert("✅ Diary name updated!");
+    };
+
+    // Change password
+    changePassBtn.onclick = async () => {
+      const newPass = prompt("Enter new password:");
+      if (!newPass) return;
+      currentPassword = newPass;
+      const snap = await getDoc(diaryRef);
+      const data = snap.data();
+      data.password = newPass;
+      await setDoc(diaryRef, data);
+      alert("✅ Password changed!");
+    };
+  </script>
+</body>
+</html>
