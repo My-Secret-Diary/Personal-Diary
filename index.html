@@ -121,7 +121,7 @@
   </div>
 
   <!-- APP ROOT (hidden; appears after login) -->
-  <div id="appRoot" style="display:none;">
+  <div id="appRoot">
     <div class="app" id="app">
 
       <!-- LEFT: Calendar -->
@@ -209,12 +209,15 @@
 
 <script type="module">
 /* ---------------------------
-   FULL APP JS (fixed to not block UI on login)
-   - Original login markup unchanged
-   - App shows instantly after correct password (same behavior)
-   - Heavy work (month indexing) runs after diary is shown
-   - Encryption PBKDF2->AES-GCM per-entry
-   - Calendar, editor, background upload/save included
+   FULL APP JS
+   - Keeps login card exactly the same
+   - Ensures settings loaded before/at login check to avoid race
+   - Shows diary (hides login) when password matches
+   - Encryption: PBKDF2 (150k iter) -> AES-GCM (per-entry salt+iv)
+   - Calendar month grid + entry-dot markers
+   - Contenteditable rich editor with execCommand for styling
+   - Page background persisted in entries/settings
+   - Background upload to Firebase Storage supported
    --------------------------- */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
@@ -317,7 +320,7 @@ async function decryptPayload(password, docData){
   return JSON.parse(dec.decode(plain));
 }
 
-// ---------- Settings load (non-blocking initial) ----------
+// ---------- Settings load (must happen before login check ideally) ----------
 async function loadSettingsFromFirestore(){
   try {
     const sRef = doc(db, "entries", "settings");
@@ -339,9 +342,6 @@ async function loadSettingsFromFirestore(){
     settingsLoaded = true;
   }
 }
-
-// call but don't block UI
-loadSettingsFromFirestore().catch(()=>{});
 
 // load entries index for month by checking each date doc (simple approach)
 async function loadEntriesIndexForMonth(year, month){
@@ -381,7 +381,9 @@ function renderCalendar(year, month){
     cell.appendChild(dot);
     const todayKey = toYMD(new Date());
     if(key === todayKey) cell.classList.add('today');
-    cell.onclick = async ()=>{ await applySelectedDate(key, dt); };
+    cell.onclick = async ()=>{
+      await applySelectedDate(key, dt);
+    };
     if(key === selectedDate) cell.classList.add('selected');
     calendarGrid.appendChild(cell);
   }
@@ -394,6 +396,7 @@ function clearCalendarSelection(){
 async function applySelectedDate(key, dt){
   selectedDate = key;
   clearCalendarSelection();
+  // find and mark selection (match by day number & month)
   calendarGrid.querySelectorAll('.dayCell').forEach(n=>{
     const num = n.querySelector('.num')?.textContent;
     if(num && parseInt(num,10) === dt.getDate()){
@@ -438,9 +441,10 @@ underlineBtn.onclick = ()=> exec('underline');
 highlightBtn.onclick = ()=> { const color = '#fff59b'; try{ exec('hiliteColor', color) }catch(e){ exec('backColor', color)} };
 textColor.oninput = e => exec('foreColor', e.target.value);
 fontSelect.onchange = e => exec('fontName', e.target.value);
-// size: wrap selection in span
+// size: we'll insert a span around selection
 sizeSelect.onchange = e => {
   const val = e.target.value;
+  // wrap selection in span with font-size
   try {
     const sel = window.getSelection();
     if(!sel.rangeCount) return;
@@ -561,8 +565,9 @@ async function saveEntryForDate(key){
     await setDoc(doc(db, "entries", key), { ...enc, savedAt: serverTimestamp() });
     entriesIndex[key] = true;
     statusText.textContent = 'Saved (encrypted)';
-    // refresh calendar dots asynchronously (do not block UI)
-    loadEntriesIndexForMonth(calendarYear, calendarMonth).then(()=> renderCalendar(calendarYear, calendarMonth)).catch(()=>{});
+    // refresh calendar dots
+    await loadEntriesIndexForMonth(calendarYear, calendarMonth);
+    renderCalendar(calendarYear, calendarMonth);
     alert('Saved!');
   } catch(e){ console.error(e); statusText.textContent='Save failed'; alert('Save failed') }
 }
@@ -585,44 +590,39 @@ renameTop.onclick = async ()=> {
   alert('Diary renamed.');
 };
 
-// ---------- Login flow (shows diary instantly; heavy work runs after) ----------
+// ---------- Login flow (keeps markup the same but robust) ----------
+// Ensure settings loaded at least once on page load so storedPassword is accurate
+await loadSettingsFromFirestore();
+// Also call it again inside click to be extra safe (handles late changes)
 loginBtn.onclick = async () => {
-  // ensure we have latest settings before checking
-  try { await loadSettingsFromFirestore(); } catch(e){ console.warn('settings reload failed'); }
+  // reload settings to get latest storedPassword before checking
+  try { await loadSettingsFromFirestore(); } catch(e){}
   if(passwordInput.value === storedPassword){
     currentPassword = passwordInput.value;
-    // hide login and show diary instantly (exact same transition style as your old script)
+    // hide login card and show the diary app (replacement behavior)
     loginDiv.style.display = 'none';
     appRoot.style.display = 'block';
-
-    // apply basic UI state immediately
-    diaryTitleElem.textContent = diaryName;
-    applyPageBackground(pageBackground);
+    // initialize calendar & month index
     const today = new Date();
     calendarYear = today.getFullYear();
     calendarMonth = today.getMonth();
     selectedDate = toYMD(today);
-    selectedDateSpan.textContent = formatNice(today);
-
-    // Start heavy work asynchronously so UI is not blocked:
-    // 1) load month index, then render calendar
-    // 2) then load the selected date entry (decrypt) and show
-    (async ()=>{
-      try {
-        await loadEntriesIndexForMonth(calendarYear, calendarMonth);
-        renderCalendar(calendarYear, calendarMonth);
-        await applySelectedDate(selectedDate, today);
-      } catch(e){ console.error('post-login init failed', e); }
-    })();
-
+    await loadEntriesIndexForMonth(calendarYear, calendarMonth);
+    renderCalendar(calendarYear, calendarMonth);
+    await applySelectedDate(selectedDate, today);
+    // animate in
+    setTimeout(()=> appDiv.classList.add('show'), 20);
+    // ensure diary title & bg applied
+    diaryTitleElem.textContent = diaryName;
+    applyPageBackground(pageBackground);
   } else {
     alert('Wrong password!');
   }
 };
 
 // ---------- Month navigation ----------
-prevMonthBtn.onclick = async ()=> { calendarMonth--; if(calendarMonth<0){calendarMonth=11;calendarYear--;} loadEntriesIndexForMonth(calendarYear, calendarMonth).then(()=>renderCalendar(calendarYear, calendarMonth)).catch(()=>{}); };
-nextMonthBtn.onclick = async ()=> { calendarMonth++; if(calendarMonth>11){calendarMonth=0;calendarYear++;} loadEntriesIndexForMonth(calendarYear, calendarMonth).then(()=>renderCalendar(calendarYear, calendarMonth)).catch(()=>{}); };
+prevMonthBtn.onclick = async ()=> { calendarMonth--; if(calendarMonth<0){calendarMonth=11;calendarYear--;} await loadEntriesIndexForMonth(calendarYear, calendarMonth); renderCalendar(calendarYear, calendarMonth); };
+nextMonthBtn.onclick = async ()=> { calendarMonth++; if(calendarMonth>11){calendarMonth=0;calendarYear++;} await loadEntriesIndexForMonth(calendarYear, calendarMonth); renderCalendar(calendarYear, calendarMonth); };
 
 // ---------- Keyboard shortcuts ----------
 document.addEventListener('keydown', (e)=> {
@@ -633,9 +633,13 @@ document.addEventListener('keydown', (e)=> {
 
 function exec(cmd,val=null){ try{ document.execCommand(cmd,false,val); }catch(e){} editor.focus(); updateToolbarStates(); }
 
-// ---------- Save clicked ----------
+// ---------- On Save clicked ----------
 saveBtn.onclick = async ()=> { await saveEntryForDate(selectedDate); };
 
+// ---------- Initial pre-load (index) ----------
+await loadEntriesIndexForMonth(calendarYear, calendarMonth);
+
+// The module ends here.
 </script>
 </body>
 </html>
