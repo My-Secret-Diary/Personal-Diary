@@ -1,101 +1,27 @@
-/* 🔹 Universal scrollbar style */
-* {
-  scrollbar-width: thin;
+/* 🧾 Right Column Scrollbar (only this new one) */
+.rightCol {
+  overflow-y: auto;        /* Allow vertical scroll if content overflows */
+  overflow-x: hidden;      /* Prevent sideways scroll */
+  scrollbar-width: thin;   /* Firefox support */
   scrollbar-color: #2563eb #f4f7fb;
 }
 
-*::-webkit-scrollbar {
+/* Chrome / Edge / Safari scrollbar styles */
+.rightCol::-webkit-scrollbar {
   width: 10px;
 }
 
-*::-webkit-scrollbar-track {
+.rightCol::-webkit-scrollbar-track {
   background: #f4f7fb;
   border-radius: 10px;
 }
 
-*::-webkit-scrollbar-thumb {
+.rightCol::-webkit-scrollbar-thumb {
   background-color: #2563eb;
   border-radius: 10px;
   border: 2px solid #f4f7fb;
 }
 
-*::-webkit-scrollbar-thumb:hover {
+.rightCol::-webkit-scrollbar-thumb:hover {
   background-color: #1d4ed8;
-}
-
-/* 🔹 Global body scroll */
-html, body {
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-
-/* 🔹 Main Frames */
-#calendar, .calendar, .left-panel, .leftCol {
-  overflow-y: auto !important;
-  position: relative;
-}
-#calendar::before, .calendar::before, .left-panel::before, .leftCol::before {
-  content: "📅 Calendar Frame";
-  position: sticky;
-  top: 0;
-  left: 5px;
-  color: #2563eb;
-  font-size: 12px;
-  font-family: monospace;
-  background: #f4f7fb;
-}
-
-/* 🔹 Toolbar / Top Frame */
-.toolbar, .topbar, .editor-toolbar {
-  overflow-x: auto !important;
-  overflow-y: hidden;
-  position: relative;
-}
-.toolbar::before, .topbar::before, .editor-toolbar::before {
-  content: "🧰 Toolbar Frame";
-  position: sticky;
-  top: 0;
-  left: 5px;
-  color: #2563eb;
-  font-size: 12px;
-  font-family: monospace;
-  background: #f4f7fb;
-}
-
-/* 🔹 Editor Area */
-#editor, .editor, .text-editor, textarea {
-  overflow-y: auto !important;
-  overflow-x: hidden;
-  position: relative;
-}
-#editor::before, .editor::before, .text-editor::before, textarea::before {
-  content: "📝 Editor Frame";
-  position: sticky;
-  top: 0;
-  left: 5px;
-  color: #2563eb;
-  font-size: 12px;
-  font-family: monospace;
-  background: #f4f7fb;
-}
-
-/* 🔹 Right Panel / Extra Settings */
-.right-panel, .rightCol, .settings-panel {
-  overflow-y: auto !important;
-  position: relative;
-}
-.right-panel::before, .rightCol::before, .settings-panel::before {
-  content: "⚙️ Settings Frame";
-  position: sticky;
-  top: 0;
-  left: 5px;
-  color: #2563eb;
-  font-size: 12px;
-  font-family: monospace;
-  background: #f4f7fb;
-}
-
-/* 🔹 Calculator (❌ No scrollbar here) */
-.calculator, #calculator {
-  overflow: hidden !important;
 }
