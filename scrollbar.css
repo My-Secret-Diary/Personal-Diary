@@ -1,74 +1,91 @@
-/* ========= Frame / Text Area Scrollbar Styling ========= */
-
-/* Disable page scroll */
+/* ========= GLOBAL PAGE SETTINGS ========= */
 html, body {
-  overflow: hidden;
+  overflow: hidden; /* disable full-page scrolling */
   height: 100%;
 }
 
-/* Enable scroll *only* inside the diary frame, text area, or editor */
-textarea,
-.editor,
+/* ========= ENABLE SCROLLING ON ALL FRAMES (EXCEPT CALCULATOR) ========= */
+
+/* All common frame types that may exist */
+iframe,
 .frame,
+.editor,
+.textarea,
 .content,
 .content-area,
-.text-box,
 .scrollable,
-#editor,
 #frame,
+#editor,
 #content,
-#container {
-  max-height: 80vh; /* Adjust visible height */
+#container,
+div[class*="frame"],
+div[id*="frame"] {
   overflow-y: auto !important;
   overflow-x: hidden !important;
-
-  /* Optional smooth scrolling */
+  max-height: 80vh;
   scroll-behavior: smooth;
-
-  /* Firefox scrollbar color */
   scrollbar-width: thin;
   scrollbar-color: #2563eb #f4f7fb;
 }
 
-/* Chrome / Edge / Safari scrollbar styles */
-textarea::-webkit-scrollbar,
-.editor::-webkit-scrollbar,
-.frame::-webkit-scrollbar,
-.content::-webkit-scrollbar,
-.content-area::-webkit-scrollbar,
-.text-box::-webkit-scrollbar,
-.scrollable::-webkit-scrollbar,
-#editor::-webkit-scrollbar,
-#frame::-webkit-scrollbar,
-#content::-webkit-scrollbar,
-#container::-webkit-scrollbar {
+/* ========= EXCLUDE CALCULATOR FRAME ========= */
+/* If your calculator frame has a unique ID or class like #calculator or .calculator */
+#calculator,
+.calculator,
+iframe#calculator,
+iframe.calculator,
+div#calculator,
+div.calculator {
+  overflow: hidden !important;
+  scrollbar-width: none !important;
+}
+
+/* ========= SCROLLBAR STYLE (BLUE THEME) ========= */
+
+/* Chrome / Edge / Safari */
+::-webkit-scrollbar {
   width: 10px;
 }
 
-textarea::-webkit-scrollbar-track,
-.editor::-webkit-scrollbar-track,
-.frame::-webkit-scrollbar-track,
-.content::-webkit-scrollbar-track,
-.content-area::-webkit-scrollbar-track,
-.text-box::-webkit-scrollbar-track,
-.scrollable::-webkit-scrollbar-track,
-#editor::-webkit-scrollbar-track,
-#frame::-webkit-scrollbar-track,
-#content::-webkit-scrollbar-track,
-#container::-webkit-scrollbar-track {
+::-webkit-scrollbar-track {
   background: #f4f7fb;
   border-radius: 10px;
 }
 
-textarea::-webkit-scrollbar-thumb,
-.editor::-webkit-scrollbar-thumb,
+::-webkit-scrollbar-thumb {
+  background-color: #2563eb;
+  border-radius: 10px;
+  border: 2px solid #f4f7fb;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #1d4ed8;
+}
+
+/* Apply scrollbar styles inside scrollable frames */
+iframe::-webkit-scrollbar,
+.frame::-webkit-scrollbar,
+.editor::-webkit-scrollbar,
+.textarea::-webkit-scrollbar,
+.content::-webkit-scrollbar,
+.content-area::-webkit-scrollbar,
+.scrollable::-webkit-scrollbar,
+#frame::-webkit-scrollbar,
+#editor::-webkit-scrollbar,
+#content::-webkit-scrollbar,
+#container::-webkit-scrollbar {
+  width: 8px;
+}
+
+iframe::-webkit-scrollbar-thumb,
 .frame::-webkit-scrollbar-thumb,
+.editor::-webkit-scrollbar-thumb,
+.textarea::-webkit-scrollbar-thumb,
 .content::-webkit-scrollbar-thumb,
 .content-area::-webkit-scrollbar-thumb,
-.text-box::-webkit-scrollbar-thumb,
 .scrollable::-webkit-scrollbar-thumb,
-#editor::-webkit-scrollbar-thumb,
 #frame::-webkit-scrollbar-thumb,
+#editor::-webkit-scrollbar-thumb,
 #content::-webkit-scrollbar-thumb,
 #container::-webkit-scrollbar-thumb {
   background-color: #2563eb;
@@ -76,15 +93,15 @@ textarea::-webkit-scrollbar-thumb,
   border: 2px solid #f4f7fb;
 }
 
-textarea::-webkit-scrollbar-thumb:hover,
-.editor::-webkit-scrollbar-thumb:hover,
+iframe::-webkit-scrollbar-thumb:hover,
 .frame::-webkit-scrollbar-thumb:hover,
+.editor::-webkit-scrollbar-thumb:hover,
+.textarea::-webkit-scrollbar-thumb:hover,
 .content::-webkit-scrollbar-thumb:hover,
 .content-area::-webkit-scrollbar-thumb:hover,
-.text-box::-webkit-scrollbar-thumb:hover,
 .scrollable::-webkit-scrollbar-thumb:hover,
-#editor::-webkit-scrollbar-thumb:hover,
 #frame::-webkit-scrollbar-thumb:hover,
+#editor::-webkit-scrollbar-thumb:hover,
 #content::-webkit-scrollbar-thumb:hover,
 #container::-webkit-scrollbar-thumb:hover {
   background-color: #1d4ed8;
