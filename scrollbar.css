@@ -1,42 +1,40 @@
-/* === Scrollbars for diary frames (not the calculator) === */
+/* === Universal scrollbar styling (for all frames except calculator) === */
 
-/* Apply scrollbars to all major frames except calculator */
-.leftCol,
-.rightCol,
-.editorWrap,
-.toolbar,
-textarea,
-[contenteditable="true"] {
-  overflow-y: auto; /* enable vertical scrolling when content overflows */
-  overflow-x: hidden;
+/* Every frame and scrollable area */
+div, section, aside, main, article, textarea, [contenteditable="true"] {
+  overflow-y: auto; /* enable vertical scrolling */
+  overflow-x: hidden; /* hide horizontal */
   scrollbar-width: thin;
   scrollbar-color: #2563eb #f4f7fb;
 }
 
-/* Chrome, Edge, Safari scrollbar styling */
-.leftCol::-webkit-scrollbar,
-.rightCol::-webkit-scrollbar,
-.editorWrap::-webkit-scrollbar,
-.toolbar::-webkit-scrollbar,
+/* Chrome, Edge, Safari scrollbars */
+div::-webkit-scrollbar,
+section::-webkit-scrollbar,
+aside::-webkit-scrollbar,
+main::-webkit-scrollbar,
+article::-webkit-scrollbar,
 textarea::-webkit-scrollbar,
 [contenteditable="true"]::-webkit-scrollbar {
   width: 10px;
 }
 
-.leftCol::-webkit-scrollbar-track,
-.rightCol::-webkit-scrollbar-track,
-.editorWrap::-webkit-scrollbar-track,
-.toolbar::-webkit-scrollbar-track,
+div::-webkit-scrollbar-track,
+section::-webkit-scrollbar-track,
+aside::-webkit-scrollbar-track,
+main::-webkit-scrollbar-track,
+article::-webkit-scrollbar-track,
 textarea::-webkit-scrollbar-track,
 [contenteditable="true"]::-webkit-scrollbar-track {
   background: #f4f7fb;
   border-radius: 10px;
 }
 
-.leftCol::-webkit-scrollbar-thumb,
-.rightCol::-webkit-scrollbar-thumb,
-.editorWrap::-webkit-scrollbar-thumb,
-.toolbar::-webkit-scrollbar-thumb,
+div::-webkit-scrollbar-thumb,
+section::-webkit-scrollbar-thumb,
+aside::-webkit-scrollbar-thumb,
+main::-webkit-scrollbar-thumb,
+article::-webkit-scrollbar-thumb,
 textarea::-webkit-scrollbar-thumb,
 [contenteditable="true"]::-webkit-scrollbar-thumb {
   background-color: #2563eb;
@@ -44,17 +42,23 @@ textarea::-webkit-scrollbar-thumb,
   border: 2px solid #f4f7fb;
 }
 
-.leftCol::-webkit-scrollbar-thumb:hover,
-.rightCol::-webkit-scrollbar-thumb:hover,
-.editorWrap::-webkit-scrollbar-thumb:hover,
-.toolbar::-webkit-scrollbar-thumb:hover,
+div::-webkit-scrollbar-thumb:hover,
+section::-webkit-scrollbar-thumb:hover,
+aside::-webkit-scrollbar-thumb:hover,
+main::-webkit-scrollbar-thumb:hover,
+article::-webkit-scrollbar-thumb:hover,
 textarea::-webkit-scrollbar-thumb:hover,
 [contenteditable="true"]::-webkit-scrollbar-thumb:hover {
   background-color: #1d4ed8;
 }
 
-/* Exclude calculator (if it exists) */
+/* === Calculator exclusion === */
 .calculator,
 #calculator {
   overflow: hidden !important;
+}
+
+/* === Optional: keep body itself static (no main page scroll) === */
+body {
+  overflow: hidden;
 }
