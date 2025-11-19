@@ -28,6 +28,6 @@
 
 /* 🧰 TOOLBAR — No scrollbars at all */
 .toolbar {
-  overflow: hidden;
+  overflow: hidden !important;
 }
 
