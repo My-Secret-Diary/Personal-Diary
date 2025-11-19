@@ -25,6 +25,7 @@ display=swap" rel="stylesheet">
 <style>
   :root{
     --accent:#2563eb; --muted:#6b7280; --card:#fff; --bg:#f4f7fb; --danger:#ef4444; --radius:12px;
+    --highlight-color: #fff59b;
   }
   *{box-sizing:border-box}
   body{ margin:0; font-family:'Quicksand',system-ui,Segoe UI,Roboto,Arial; background:var(--bg); min-height:100vh; display:flex; align-items:center; justify-content:center; padding:18px; color:#0f1720; transition: background .25s, color .25s; }
@@ -85,7 +86,7 @@ display=swap" rel="stylesheet">
   .colorPreview{ width:28px; height:20px; border-radius:6px; border:1px solid rgba(0,0,0,0.06); display:inline-block; vertical-align:middle; margin-left:6px }
 
   /* NOTE: background changed to solid white to remove any "blur/transparency" effect per request */
-  .editorWrap{ padding:12px; border-radius:12px; border:1px solid rgba(0,0,0,0.05); min-height:480px; overflow:auto; background: #ffffff; }
+  .editorWrap{ padding:12px; border-radius:12px; border:1px solid rgba(0,0,0,0.05); min-height:480px; overflow:auto; background: #ffffff; position:relative; }
   .editor{ min-height:420px; outline:none; font-size:16px; color:inherit; background:transparent; padding:12px; }
 
   /* Save button fixed in viewport so it won't move when editor content changes */
@@ -94,6 +95,14 @@ display=swap" rel="stylesheet">
   .palette{ position:relative; display:inline-block; }
   .palettePopup{ position:absolute; top:46px; left:0; background:var(--card); padding:8px; border-radius:8px; display:grid; grid-template-columns: repeat(6,24px); gap:8px; box-shadow:0 8px 30px rgba(2,6,23,0.08); z-index:50 }
   .sw{ width:24px; height:24px; border-radius:6px; cursor:pointer; border:1px solid rgba(0,0,0,0.06) }
+
+  /* highlight span style */
+  .hl { background: var(--highlight-color); border-radius: 2px; }
+
+  /* pencil cursor */
+  .pencil-cursor .editor, .editor.pencil {
+    cursor: url('highlighter.png') 0 16, auto;
+  }
 
   /* toast */
   .toast { position: fixed; left: 50%; transform: translateX(-50%) translateY(12px); bottom: 28px; min-width: 160px; padding: 10px 14px; border-radius: 10px; color: #fff; font-weight: 600; text-align:center; z-index:9999; opacity:0; pointer-events:none; transition: opacity .22s, transform .22s; }
@@ -208,6 +217,11 @@ display=swap" rel="stylesheet">
           <label style="margin-left:12px; font-size:13px; color:var(--muted)">Background</label>
           <input id="bgInput" type="file" accept="image/*" style="padding:6px; border-radius:8px;" />
           <button id="removeBg" class="squareBtn" title="Remove background">Remove</button>
+
+          <!-- per-day page background controls (added) -->
+          <div style="width:8px"></div>
+          <button id="setPageBgBtn" class="squareBtn" title="Set Page Background Image">Set Page Background</button>
+          <button id="removePageBgBtn" class="squareBtn" title="Remove Page Background">Remove Page Bg</button>
         </div>
 
         <div class="editorWrap" id="editorWrap">
@@ -230,10 +244,17 @@ display=swap" rel="stylesheet">
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 <script type="module">
-/* FULL working script with fixes for:
-   1) highlight toggling (caret normalization so toggling off prevents future typing from inheriting highlight)
-   2) save button staying fixed in bottom-right (doesn't move when editor grows)
-   NOTE: background/blur removed for editor area only (editorWrap uses solid white).
+/* Enhanced script implementing:
+   - Highlight pencil (click -> pencil cursor -> click-drag highlight wrapping with <span class="hl">)
+   - Clear formatting that removes bold/italic/underline/strike/color/highlight/font-family/font-size without removing lists or text
+   - Custom color picker + saved into palette
+   - Per-day background images saved inside encrypted payload.pageBackground
+   - Font change behavior: applies to selection only, or sets typing style if no selection
+   - Prevent formatting on spaces (spaces inserted as plain text)
+   - Replace execCommand-based highlighting with span.wrap approach
+   - Pencil cursor icon applied via CSS class
+   - Selection-based highlight removal
+   - All existing Firebase logic preserved; only payload augmented with pageBackground
 */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
@@ -294,9 +315,13 @@ const bgInput = document.getElementById('bgInput');
 const removeBg = document.getElementById('removeBg');
 
 const editor = document.getElementById('editor');
+const editorWrap = document.getElementById('editorWrap');
 const saveFloatingBtn = document.getElementById('saveFloatingBtn');
 
 const toastEl = document.getElementById('toast');
+
+const setPageBgBtn = document.getElementById('setPageBgBtn');
+const removePageBgBtn = document.getElementById('removePageBgBtn');
 
 let storedPassword = "53458678";
 let diaryName = "My Secret Diary";
@@ -308,23 +333,30 @@ let calendarMonth = (new Date()).getMonth();
 let selectedDate = null;
 let entriesIndex = {};
 
-// typing styling state
+// typing styling & highlight state
 let currentColor = null;
 let highlightActive = false;
-const highlightColor = '#fff59b';
+const highlightColor = getComputedStyle(document.documentElement).getPropertyValue('--highlight-color').trim() || '#fff59b';
 
-// palette
+// per-day page background for currently loaded date
+let currentPageBackground = null;
+
+// typing style for font & size when no selection (applies to future typed text)
+let typingFont = null;
+let typingSize = null;
+
+// palette (allow custom additions)
 const paletteColors = ['#000000','#333333','#555555','#8B5CF6','#2563EB','#10B981','#F59E0B','#EF4444','#FFFFFF','#FFD3B6','#BDE0FE','#FFD6F0'];
+
+// helper to create color swatches including + custom
 function createColorSwatches(){
   colorPopup.innerHTML = '';
-  paletteColors.forEach(c=>{
+  paletteColors.forEach((c, idx)=>{
     const s = document.createElement('div');
     s.className='sw';
     s.style.background = c;
     s.title = c;
     s.onclick = ()=>{
-      try{ document.execCommand('styleWithCSS', false, true); }catch(e){}
-      try{ document.execCommand('foreColor', false, c); }catch(e){ console.warn('foreColor failed', e) }
       currentColor = c;
       colorPreview.style.background = c;
       colorPreview.title = c;
@@ -333,9 +365,46 @@ function createColorSwatches(){
     };
     colorPopup.appendChild(s);
   });
+
+  // add custom color "plus" square
+  const add = document.createElement('div');
+  add.className = 'sw';
+  add.style.display = 'flex';
+  add.style.alignItems = 'center';
+  add.style.justifyContent = 'center';
+  add.style.fontWeight = '700';
+  add.style.cursor = 'pointer';
+  add.textContent = '+';
+  add.title = 'Add custom color';
+  add.onclick = ()=>{
+    const input = document.createElement('input');
+    input.type = 'color';
+    input.style.position = 'fixed';
+    input.style.left = '-9999px';
+    document.body.appendChild(input);
+    input.click();
+    input.onchange = ()=>{
+      const c = input.value;
+      if(c && !paletteColors.includes(c)){
+        paletteColors.unshift(c);
+      } else if(c){
+        // move to front
+        const i = paletteColors.indexOf(c);
+        if(i>0){ paletteColors.splice(i,1); paletteColors.unshift(c); }
+      }
+      createColorSwatches();
+      currentColor = c;
+      colorPreview.style.background = c;
+      colorPreview.title = c;
+      document.body.removeChild(input);
+    };
+    // cleanup if user cancels (onblur)
+    input.onblur = ()=> { if(document.body.contains(input)) document.body.removeChild(input); };
+  };
+  colorPopup.appendChild(add);
 }
 createColorSwatches();
-colorIcon.onclick = ()=> { colorPopup.style.display = colorPopup.style.display === 'block' ? 'none' : 'block'; };
+colorIcon.onclick = (e)=> { e.stopPropagation(); colorPopup.style.display = colorPopup.style.display === 'block' ? 'none' : 'block'; };
 
 // close popup on outside click
 document.addEventListener('click', e => {
@@ -469,13 +538,15 @@ function updateEditModeForDate(key){
   if(dd > today){
     editor.setAttribute('contenteditable','false');
     saveTop.disabled = saveFloatingBtn.disabled = true;
+    setPageBgBtn.disabled = removePageBgBtn.disabled = true;
   } else {
     editor.setAttribute('contenteditable','true');
     saveTop.disabled = saveFloatingBtn.disabled = false;
+    setPageBgBtn.disabled = removePageBgBtn.disabled = false;
   }
 }
 
-// execCommand helpers
+// execCommand helpers (kept for certain actions but highlight uses spans)
 try{ document.execCommand('styleWithCSS', false, true); }catch(e){}
 function execCmd(cmd, value=null){
   try{ document.execCommand('styleWithCSS', false, true); }catch(e){}
@@ -500,55 +571,70 @@ function insertAfter(newNode, referenceNode){
   referenceNode.parentNode.insertBefore(newNode, referenceNode.nextSibling);
 }
 
-// utility: compare computed background color of element with highlightColor
-function cssBackgroundMatchesHighlight(el){
-  if(!el || el.nodeType !== 1) return false;
-  const tmp = document.createElement('div');
-  tmp.style.backgroundColor = highlightColor;
-  document.body.appendChild(tmp);
-  const desired = getComputedStyle(tmp).backgroundColor;
-  document.body.removeChild(tmp);
-  const cur = getComputedStyle(el).backgroundColor;
-  return cur === desired;
+// Utility to wrap a Range's contents in an element (handles complex cases by using extractContents)
+function wrapRangeWithElement(range, wrapperEl){
+  try{
+    const docFrag = range.extractContents();
+    // remove nested wrappers of same type to avoid double-nesting if wrapperEl is highlight
+    // but we will keep inner structure.
+    wrapperEl.appendChild(docFrag);
+    range.insertNode(wrapperEl);
+    // adjust selection to be after wrapper
+    const sel = window.getSelection();
+    if(sel){
+      sel.removeAllRanges();
+      const newRange = document.createRange();
+      newRange.setStartAfter(wrapperEl);
+      newRange.collapse(true);
+      sel.addRange(newRange);
+    }
+    return wrapperEl;
+  } catch(e){
+    // fallback: try surroundContents (may throw if range splits non-text nodes)
+    try{
+      range.surroundContents(wrapperEl);
+      return wrapperEl;
+    }catch(err){
+      console.warn('wrapRange failed', err, e);
+    }
+  }
+  return null;
+}
+
+// helpers to detect if element is highlight
+function isHighlightEl(el){
+  return el && el.nodeType===1 && (el.classList.contains('hl') || (el.style && (el.style.backgroundColor && el.style.backgroundColor.trim())));
 }
 
 // When highlight is turned off, make sure caret is not inside a highlighted span.
-// Approach: if caret is collapsed and ancestor span has the highlight background, insert a spacer span (with zero-width) after the highlighted span and place caret inside spacer.
 function moveCaretOutOfHighlight(){
   const sel = window.getSelection();
   if(!sel || !sel.rangeCount) return;
   const range = sel.getRangeAt(0);
   if(!range.collapsed) return; // only needed when caret collapsed
   let node = range.startContainer;
-  // ensure we have an element node to check ancestors
   let ancestor = (node.nodeType === 3) ? node.parentElement : node;
   while(ancestor && ancestor !== editor && ancestor.nodeType === 1){
-    if(cssBackgroundMatchesHighlight(ancestor)){
-      // found a highlighted ancestor - we need to move caret just after the highlighted element
+    if(ancestor.classList && ancestor.classList.contains('hl') || (ancestor.style && ancestor.style.backgroundColor && ancestor.style.backgroundColor.trim())){
       const spacer = document.createElement('span');
-      // use a zero-width space so it's selectable; we'll remove it if user types normally
       spacer.textContent = '\u200B';
-      // keep spacer with no background so typing happens outside highlight
       spacer.style.background = 'transparent';
       insertAfter(spacer, ancestor);
-      // place caret inside spacer (after the zero-width, i.e. at position 1)
       const newRange = document.createRange();
       newRange.setStart(spacer.firstChild, 1);
       newRange.collapse(true);
       sel.removeAllRanges();
       sel.addRange(newRange);
-      // small cleanup: when user types, the \u200B will be replaced by their text; optionally we can remove stray \u200B later
+      // cleanup as before
       setTimeout(()=> {
-        // remove any spacer nodes that are empty (only contain zero-width) and not where caret currently is
         try{
           const allSpacers = editor.querySelectorAll('span');
           allSpacers.forEach(s=>{
             if(s.textContent === '\u200B'){
-              // keep this spacer only if selection is inside it; otherwise remove
               const sel2 = window.getSelection();
               if(sel2 && sel2.rangeCount){
                 const r = sel2.getRangeAt(0);
-                if(r.startContainer === s.firstChild) return; // keep it
+                if(r.startContainer === s.firstChild) return;
               }
               s.remove();
             }
@@ -561,63 +647,226 @@ function moveCaretOutOfHighlight(){
   }
 }
 
-// toolbar bindings
-btnBold.onclick = ()=> execCmd('bold');
-btnItalic.onclick = ()=> execCmd('italic');
-btnUnderline.onclick = ()=> execCmd('underline');
-btnStrike.onclick = ()=> execCmd('strikeThrough');
+// HIGHLIGHT: wrap selection with <span class="hl" style="background:...">
+function applyHighlightToSelection(range){
+  if(!range || range.collapsed) return;
+  // If selection already contains exact whole hl spans, we might be duplicating - but we'll still wrap.
+  const wrapper = document.createElement('span');
+  wrapper.className = 'hl';
+  wrapper.style.background = highlightColor;
+  wrapRangeWithElement(range, wrapper);
+}
 
-btnBullet.onclick = ()=> execCmd('insertUnorderedList');
-btnNumber.onclick = ()=> execCmd('insertOrderedList');
+// Remove highlight from only selected part
+function removeHighlightFromSelection(range){
+  if(!range || range.collapsed) return;
+  // We'll get the fragment, search for hl spans and strip them (unwrap their children),
+  // then replace the selection with processed fragment.
+  const frag = range.cloneContents();
+  // process frag: unwrap .hl elements and remove background style on spans
+  const walker = document.createTreeWalker(frag, NodeFilter.SHOW_ELEMENT, null, false);
+  const toUnwrap = [];
+  while(walker.nextNode()){
+    const el = walker.currentNode;
+    if(el.classList && el.classList.contains('hl')){
+      toUnwrap.push(el);
+    } else if(el.tagName === 'SPAN' && el.style && el.style.backgroundColor){
+      // remove background style
+      el.style.backgroundColor = '';
+      // if no other styles/attributes, mark for unwrap
+      if(!el.getAttributeNames().some(a=>a!=='style') && el.style.cssText.trim()==='') toUnwrap.push(el);
+    }
+  }
+  toUnwrap.forEach(el=>{
+    // replace el with its children
+    while(el.firstChild) el.parentNode.insertBefore(el.firstChild, el);
+    el.parentNode.removeChild(el);
+  });
+  // replace range contents with processed frag
+  range.deleteContents();
+  range.insertNode(frag);
+}
 
-alignLeft.onclick = ()=> execCmd('justifyLeft');
-alignCenter.onclick = ()=> execCmd('justifyCenter');
-alignRight.onclick = ()=> execCmd('justifyRight');
+// Highlight button behavior & pencil cursor mode (click -> enable pencil cursor; click again -> disable)
+let highlightingDragActive = false;
+let highlightMouseDown = false;
+let highlightStartRange = null;
 
-clearFmt.onclick = ()=> execCmd('removeFormat');
-
-// Highlight toggle: apply to selection if present, but crucially if turning off, normalize caret so typing afterwards doesn't keep highlight
 btnHighlight.onclick = ()=>{
+  // Toggle pencil mode
   highlightActive = !highlightActive;
   btnHighlight.classList.toggle('active', highlightActive);
-
-  const sel = window.getSelection();
-  if(sel && sel.rangeCount && !sel.getRangeAt(0).collapsed){
-    // apply highlight to selected text immediately if selection exists
-    try{ document.execCommand('styleWithCSS', false, true); }catch(e){}
-    try{ document.execCommand('hiliteColor', false, highlightColor); }catch(e){ try{ document.execCommand('backColor', false, highlightColor); }catch(e){} }
-    updateToolbarStates();
-  } else {
-    // no selection - it's a typing-state toggle. If we turned OFF highlight, ensure caret is outside any highlighted node
-    if(!highlightActive){
-      // move caret out of highlighted span if needed
-      moveCaretOutOfHighlight();
+  if(highlightActive){
+    editor.classList.add('pencil');
+    document.querySelector('.rightCol').classList.add('pencil-cursor');
+    // When enabling, if user has a range selected, apply highlight to selection directly
+    const sel = window.getSelection();
+    if(sel && sel.rangeCount && !sel.getRangeAt(0).collapsed){
+      const r = sel.getRangeAt(0).cloneRange();
+      // If selection contains any hl spans entirely -> remove highlight in selection instead
+      const containsHL = (() => {
+        const frag = r.cloneContents();
+        return !!frag.querySelector && !!frag.querySelector('.hl');
+      })();
+      if(containsHL){
+        removeHighlightFromSelection(r);
+      } else {
+        applyHighlightToSelection(r);
+      }
+      updateToolbarStates();
     } else {
-      // when switching highlight on with caret inside an empty spot that previously had no highlight,
-      // we do nothing now — the beforeinput handler will insert spans while typing.
+      // no selection: show pencil cursor and we'll handle mousedown drag events to highlight
     }
-    updateToolbarStates();
+  } else {
+    editor.classList.remove('pencil');
+    document.querySelector('.rightCol').classList.remove('pencil-cursor');
+    // turn off pencil mode: if caret is inside a highlight, move it out
+    moveCaretOutOfHighlight();
   }
+  updateToolbarStates();
 };
 
-// beforeinput intercept so typing applies currentColor/highlight when caret collapsed
+// Mouse handling for click-drag highlight inside editor
+editor.addEventListener('mousedown', (e)=>{
+  if(!highlightActive) return;
+  highlightMouseDown = true;
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  // create a new range starting at caret position where mouse down occurred
+  const range = document.caretRangeFromPoint ? document.caretRangeFromPoint(e.clientX, e.clientY) : document.caretPositionFromPoint ? (function(pos){ const pr = document.caretPositionFromPoint(pos.clientX,pos.clientY); const r = document.createRange(); r.setStart(pr.offsetNode, pr.offset); return r; })(e) : null;
+  if(range) highlightStartRange = range.cloneRange();
+  e.preventDefault();
+});
+
+document.addEventListener('mousemove', (e)=>{
+  if(!highlightActive || !highlightMouseDown || !highlightStartRange) return;
+  // Extend selection to current mouse position
+  const endRange = document.caretRangeFromPoint ? document.caretRangeFromPoint(e.clientX, e.clientY) : null;
+  if(!endRange) return;
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  const r = document.createRange();
+  try{
+    r.setStart(highlightStartRange.startContainer, highlightStartRange.startOffset);
+    r.setEnd(endRange.startContainer, endRange.startOffset);
+    sel.addRange(r);
+  }catch(err){}
+});
+
+document.addEventListener('mouseup', (e)=>{
+  if(!highlightActive) return;
+  if(highlightMouseDown){
+    highlightMouseDown = false;
+    // finalize selection and wrap
+    const sel = window.getSelection();
+    if(sel && sel.rangeCount && !sel.getRangeAt(0).collapsed){
+      const r = sel.getRangeAt(0).cloneRange();
+      // If selection already has hl elements -> remove hl from selection; else apply hl
+      const frag = r.cloneContents();
+      const hasHL = !!frag.querySelector && !!frag.querySelector('.hl');
+      if(hasHL){
+        removeHighlightFromSelection(r);
+      } else {
+        applyHighlightToSelection(r);
+      }
+      sel.removeAllRanges();
+      // place caret after the applied highlight for predictable typing
+      const newRange = document.createRange();
+      // find node after the applied highlight if possible
+      try{
+        // Attempt to set caret after last node in applied region
+        newRange.setStartAfter(r.endContainer);
+      }catch(e){
+        newRange.setStart(editor, editor.childNodes.length);
+      }
+      newRange.collapse(true);
+      sel.addRange(newRange);
+    }
+    highlightStartRange = null;
+    updateToolbarStates();
+  }
+});
+
+// beforeinput intercept so typing applies currentColor/highlight/typingFont/typingSize when caret collapsed
 editor.addEventListener('beforeinput', (e)=>{
-  if(e.inputType === 'insertText' && e.data && e.data.length > 0){
+  if(e.inputType === 'insertText' && e.data !== null){
     const sel = window.getSelection();
     if(!sel.rangeCount) return;
     const range = sel.getRangeAt(0);
-    if(!range.collapsed) return;
-    if(!highlightActive && !currentColor) return; // nothing special
+    if(!range.collapsed){
+      // Non-collapsed insertion (replacing selected text) - we will let default or handle as styled replacement below
+      // We'll fall back to manual replace to preserve formatting rules
+      e.preventDefault();
+      // create node to insert
+      const text = e.data;
+      let nodeToInsert;
+      if(text === ' '){
+        nodeToInsert = document.createTextNode(' ');
+      } else {
+        // create span only if styling requested
+        if(currentColor || highlightActive || typingFont || typingSize){
+          nodeToInsert = document.createElement('span');
+          if(currentColor) nodeToInsert.style.color = currentColor;
+          if(highlightActive) nodeToInsert.style.backgroundColor = highlightColor;
+          if(typingFont) nodeToInsert.style.fontFamily = typingFont;
+          if(typingSize) nodeToInsert.style.fontSize = typingSize;
+          nodeToInsert.textContent = text;
+        } else {
+          nodeToInsert = document.createTextNode(text);
+        }
+      }
+      range.deleteContents();
+      range.insertNode(nodeToInsert);
+      // move caret after node
+      const newR = document.createRange();
+      if(nodeToInsert.nodeType === 3){
+        newR.setStart(nodeToInsert, nodeToInsert.length);
+      } else {
+        newR.setStartAfter(nodeToInsert);
+      }
+      newR.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(newR);
+      updateToolbarStates();
+      return;
+    }
+
+    // collapsed caret insertion
+    // If user typed a space and currently formatting is active -> insert plain space and move caret outside formatting
+    if(e.data === ' '){
+      e.preventDefault();
+      // insert plain space text node at caret
+      const textNode = document.createTextNode(' ');
+      range.insertNode(textNode);
+      // move caret after space
+      range.setStartAfter(textNode);
+      range.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(range);
+      // ensure caret is not inside a highlighted/span by moving it out
+      moveCaretOutOfHighlight();
+      updateToolbarStates();
+      return;
+    }
+
+    // For normal characters (non-space)
+    if(!currentColor && !highlightActive && !typingFont && !typingSize){
+      // nothing special; allow browser to insert normally
+      return;
+    }
+
+    // Otherwise intercept and insert a styled span for this character (keeps past text unmodified)
     e.preventDefault();
     const span = document.createElement('span');
     if(currentColor) span.style.color = currentColor;
     if(highlightActive) span.style.backgroundColor = highlightColor;
-    // Avoid accidentally merging with adjacent identical spans by ensuring we create a fresh node
+    if(typingFont) span.style.fontFamily = typingFont;
+    if(typingSize) span.style.fontSize = typingSize;
     span.textContent = e.data;
     range.insertNode(span);
     // move caret after span
     range.setStartAfter(span);
-    range.setEndAfter(span);
+    range.collapse(true);
     sel.removeAllRanges();
     sel.addRange(range);
     updateToolbarStates();
@@ -630,7 +879,6 @@ function cleanupZeroWidthSpacers(){
     const nodes = editor.querySelectorAll('span');
     nodes.forEach(s=>{
       if(s.textContent === '\u200B'){
-        // remove if empty and selection not inside it
         const sel = window.getSelection();
         let keep = false;
         if(sel && sel.rangeCount){
@@ -693,9 +941,71 @@ fontFilter.addEventListener('input', ()=> {
   populateFontSelect(filtered);
 });
 
-// apply font & size visually to editor
-fontSelect.onchange = ()=> { editor.style.fontFamily = fontSelect.value; settingsMeta.font = fontSelect.value; };
-sizeSelect.onchange = ()=> { editor.style.fontSize = sizeSelect.value; settingsMeta.size = sizeSelect.value; };
+// apply font & size visually to editor when user changes global display (keeps current behaviour for display)
+// But implement selection behavior & typing behavior
+fontSelect.onchange = ()=>{
+  const value = fontSelect.value;
+  const sel = window.getSelection();
+  if(sel && sel.rangeCount && !sel.getRangeAt(0).collapsed){
+    // apply to selection only
+    const r = sel.getRangeAt(0).cloneRange();
+    // create wrapper span with font-family
+    const span = document.createElement('span');
+    span.style.fontFamily = value;
+    wrapRangeWithElement(r, span);
+    // after applying styling, keep caret after inserted span
+    updateToolbarStates();
+  } else {
+    // no selection -> set typing style & insert a zero-width styled spacer to show caret in that font
+    typingFont = value;
+    // Insert a zero-width spacer with style and move caret inside it
+    const sel2 = window.getSelection();
+    if(sel2 && sel2.rangeCount){
+      const r2 = sel2.getRangeAt(0);
+      // create spacer
+      const spacer = document.createElement('span');
+      spacer.textContent = '\u200B';
+      spacer.style.fontFamily = value;
+      spacer.classList.add('typing-spacer');
+      r2.insertNode(spacer);
+      // set caret inside spacer (after the zero-width so typing replaces it)
+      const newRange = document.createRange();
+      newRange.setStart(spacer.firstChild, 1);
+      newRange.collapse(true);
+      sel2.removeAllRanges();
+      sel2.addRange(newRange);
+      // cleanup of spacer will happen in cleanupZeroWidthSpacers() when appropriate
+    }
+  }
+};
+
+sizeSelect.onchange = ()=>{
+  const value = sizeSelect.value;
+  const sel = window.getSelection();
+  if(sel && sel.rangeCount && !sel.getRangeAt(0).collapsed){
+    const r = sel.getRangeAt(0).cloneRange();
+    const span = document.createElement('span');
+    span.style.fontSize = value;
+    wrapRangeWithElement(r, span);
+    updateToolbarStates();
+  } else {
+    typingSize = value;
+    const sel2 = window.getSelection();
+    if(sel2 && sel2.rangeCount){
+      const r2 = sel2.getRangeAt(0);
+      const spacer = document.createElement('span');
+      spacer.textContent = '\u200B';
+      spacer.style.fontSize = value;
+      spacer.classList.add('typing-spacer');
+      r2.insertNode(spacer);
+      const newRange = document.createRange();
+      newRange.setStart(spacer.firstChild, 1);
+      newRange.collapse(true);
+      sel2.removeAllRanges();
+      sel2.addRange(newRange);
+    }
+  }
+};
 
 // encryption wrappers for entries
 async function encryptEntry(password, payload){ return await encryptPayload(password, payload); }
@@ -704,10 +1014,13 @@ async function decryptEntry(password, docData){ return await decryptPayload(pass
 // load entry
 async function loadEntryForDate(key){
   try{
+    currentPageBackground = null;
     const snap = await getDoc(doc(db,'entries', key));
     if(!snap.exists()){
       editor.innerHTML = '<div class="placeholder" style="color:var(--muted)">Start writing your thoughts...</div>';
       ensurePlaceholder();
+      // reset page background for this date
+      applyPageBackground(null);
       return;
     }
     const data = snap.data();
@@ -718,16 +1031,31 @@ async function loadEntryForDate(key){
         settingsMeta = payload.meta || settingsMeta;
         diaryName = payload.diaryName || diaryName;
         diaryTitle.textContent = diaryName;
-        applySettingsMeta();
+        // load per-page background if present
+        currentPageBackground = payload.pageBackground || null;
+        applyPageBackground(currentPageBackground);
+        applySettingsMeta(); // still apply general UI settings
       } catch(e){
         editor.innerHTML = '<div class="placeholder" style="color:var(--muted)">Unable to decrypt this entry (wrong password).</div>';
       }
     } else if(data.text){
       editor.innerHTML = data.text || '';
+      applyPageBackground(null);
     } else {
       editor.innerHTML = '<div class="placeholder" style="color:var(--muted)">Empty</div>';
+      applyPageBackground(null);
     }
   } catch(e){ console.error('loadEntryForDate', e) }
+}
+
+function applyPageBackground(imgData){
+  if(imgData){
+    editorWrap.style.backgroundImage = `url("${imgData}")`;
+    editorWrap.style.backgroundSize = 'cover';
+    editorWrap.style.backgroundPosition = 'center';
+  } else {
+    editorWrap.style.backgroundImage = '';
+  }
 }
 
 // save entry (encrypted)
@@ -738,7 +1066,7 @@ async function saveEntryForDate(key){
   if(dd > today) { showToast('Cannot save future entries', false); return false; }
   ensurePlaceholder();
   const html = editor.innerHTML;
-  const payload = { html, meta: settingsMeta, diaryName, savedAt: new Date().toISOString() };
+  const payload = { html, meta: settingsMeta, diaryName, pageBackground: currentPageBackground || null, savedAt: new Date().toISOString() };
   try{
     const enc = await encryptEntry(currentPassword, payload);
     await setDoc(doc(db,'entries', key), { ...enc, savedAt: serverTimestamp() });
@@ -765,6 +1093,7 @@ function applySettingsMeta(){
   } else rc.style.backgroundImage = '';
   if(settingsMeta.font) fontSelect.value = settingsMeta.font;
   if(settingsMeta.size) sizeSelect.value = settingsMeta.size;
+  // NOTE: do not change past text fonts; editor display font is set for readability only
   editor.style.fontFamily = fontSelect.value;
   editor.style.fontSize = sizeSelect.value;
 }
@@ -822,7 +1151,7 @@ renameTop.onclick = async ()=>{ const newName = prompt('Enter new diary name:');
 changePassTop.onclick = async ()=>{ const newPass = prompt('Enter new password:'); if(!newPass) return; storedPassword = newPass; await saveSettingsDoc(true); };
 themeToggleTop.onclick = async ()=>{ settingsMeta.theme = settingsMeta.theme === 'dark' ? 'light' : 'dark'; applySettingsMeta(); await saveSettingsDoc(false); };
 
-// background upload & remove
+// background upload & remove (global)
 bgInput.onchange = async (e)=>{
   const f = e.target.files[0];
   if(!f) return;
@@ -842,6 +1171,35 @@ removeBg.onclick = async ()=>{
   if(!ok) showToast('Remove background failed', false);
 };
 
+// per-day page background controls
+setPageBgBtn.onclick = async ()=>{
+  // open file picker
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.style.display = 'none';
+  document.body.appendChild(input);
+  input.click();
+  input.onchange = async (ev)=>{
+    const f = input.files[0];
+    if(!f) { document.body.removeChild(input); return; }
+    const reader = new FileReader();
+    reader.onload = (e2)=>{
+      currentPageBackground = e2.target.result;
+      applyPageBackground(currentPageBackground);
+      showToast('Page background set (save to persist)');
+      document.body.removeChild(input);
+    };
+    reader.readAsDataURL(f);
+  };
+  input.oncancel = ()=> { document.body.removeChild(input); };
+};
+removePageBgBtn.onclick = ()=>{
+  currentPageBackground = null;
+  applyPageBackground(null);
+  showToast('Page background removed (save to persist)');
+};
+
 // keyboard shortcuts
 document.addEventListener('keydown', (e)=>{
   if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='b'){ e.preventDefault(); execCmd('bold'); }
@@ -852,6 +1210,113 @@ document.addEventListener('keydown', (e)=>{
 // initial placeholder + toolbar state
 ensurePlaceholder();
 updateToolbarStates();
+
+/* ---------------------------
+   CLEAR FORMATTING IMPLEMENTATION
+   - Removes bold/italic/underline/strike/color/highlight/font-family/font-size
+   - Does not remove text or convert lists to plain text
+   --------------------------- */
+function cleanFragmentStyles(frag){
+  // This function will traverse the fragment and:
+  // - unwrap inline semantic tags (B, STRONG, I, EM, U, S, STRIKE)
+  // - remove style properties color, background-color, font-family, font-size from spans & elements
+  // - unwrap hl spans
+  const walker = document.createTreeWalker(frag, NodeFilter.SHOW_ELEMENT, null, false);
+  const toProcess = [];
+  while(walker.nextNode()){
+    toProcess.push(walker.currentNode);
+  }
+  toProcess.forEach(el=>{
+    const tag = el.tagName;
+    if(tag === 'B' || tag === 'STRONG' || tag === 'I' || tag === 'EM' || tag === 'U' || tag === 'S' || tag === 'STRIKE'){
+      // unwrap but keep children
+      while(el.firstChild) el.parentNode.insertBefore(el.firstChild, el);
+      el.parentNode.removeChild(el);
+      return;
+    }
+    if(el.classList && el.classList.contains('hl')){
+      // unwrap highlight span: keep children
+      while(el.firstChild) el.parentNode.insertBefore(el.firstChild, el);
+      el.parentNode.removeChild(el);
+      return;
+    }
+    // For spans and other inline elements, remove style properties that apply to formatting
+    if(el.style){
+      el.style.removeProperty('font-weight');
+      el.style.removeProperty('font-style');
+      el.style.removeProperty('text-decoration');
+      el.style.removeProperty('text-decoration-line');
+      el.style.removeProperty('color');
+      el.style.removeProperty('background-color');
+      el.style.removeProperty('background');
+      el.style.removeProperty('font-family');
+      el.style.removeProperty('font-size');
+      // If no attributes and no inline styles left, unwrap the span to keep DOM clean
+      const attrs = el.getAttributeNames().filter(a=>a!=='style');
+      if(el.tagName === 'SPAN' && attrs.length === 0 && (!el.getAttribute('style') || el.style.cssText.trim()==='')){
+        while(el.firstChild) el.parentNode.insertBefore(el.firstChild, el);
+        el.parentNode.removeChild(el);
+      }
+    }
+  });
+}
+
+clearFmt.onclick = ()=>{
+  const sel = window.getSelection();
+  if(sel && sel.rangeCount && !sel.getRangeAt(0).collapsed){
+    const range = sel.getRangeAt(0).cloneRange();
+    const frag = range.cloneContents();
+    cleanFragmentStyles(frag);
+    // replace selection with cleaned fragment
+    range.deleteContents();
+    range.insertNode(frag);
+    // collapse selection after inserted content
+    sel.removeAllRanges();
+    const newR = document.createRange();
+    // place caret at end of inserted content
+    if(range.startContainer && range.startContainer.nodeType === 3){
+      newR.setStart(range.startContainer, Math.min(range.startOffset, (range.startContainer.length||0)));
+    } else {
+      newR.setStartAfter(range.startContainer);
+    }
+    newR.collapse(true);
+    sel.addRange(newR);
+  } else {
+    // no selection: clean entire editor content but preserve lists & block structure
+    const container = document.createElement('div');
+    // clone children to container
+    Array.from(editor.childNodes).forEach(n=> container.appendChild(n.cloneNode(true)));
+    cleanFragmentStyles(container);
+    editor.innerHTML = '';
+    // append cleaned nodes back
+    while(container.firstChild) editor.appendChild(container.firstChild);
+    ensurePlaceholder();
+  }
+  updateToolbarStates();
+};
+
+/* ---------------------------
+   Simple format buttons that rely on execCommand for bold/italic/underline/list/align.
+   We'll keep them as before but the clear formatting handles spans and inline styles thoroughly.
+   --------------------------- */
+btnBold.onclick = ()=> execCmd('bold');
+btnItalic.onclick = ()=> execCmd('italic');
+btnUnderline.onclick = ()=> execCmd('underline');
+btnStrike.onclick = ()=> execCmd('strikeThrough');
+
+btnBullet.onclick = ()=> execCmd('insertUnorderedList');
+btnNumber.onclick = ()=> execCmd('insertOrderedList');
+
+alignLeft.onclick = ()=> execCmd('justifyLeft');
+alignCenter.onclick = ()=> execCmd('justifyCenter');
+alignRight.onclick = ()=> execCmd('justifyRight');
+
+/* ---------------------------
+   Additional helper: remove highlight spans when user selects highlighted area and toggles highlight (handled earlier)
+   --------------------------- */
+
+// Ensure that changes which affect selection states update toolbar
+editor.addEventListener('selectionchange', updateToolbarStates);
 
 </script>
 </body>
