@@ -1,9 +1,10 @@
-/* 🧾 RIGHT COLUMN — Always visible white + gray scrollbar */
+/* 🧾 RIGHT COLUMN — vertical scroll with styled scrollbar */
 .rightCol {
   overflow-y: scroll !important;   /* Always show scrollbar */
   overflow-x: hidden !important;   /* Prevent sideways scroll */
   scrollbar-width: thin;
   scrollbar-color: #b0b0b0 #ffffff;  /* Gray thumb, white track (Firefox) */
+  position: relative;               /* Needed for sticky children */
 }
 
 /* Chrome / Edge / Safari scrollbar styles */
@@ -26,8 +27,14 @@
   background-color: #909090;  /* Slightly darker gray on hover */
 }
 
-/* 🧰 TOOLBAR — No scrollbars at all */
+/* 🧰 TOOLBAR — FIXED + NOT CUT ANYMORE */
 .toolbar {
-  overflow: hidden !important;
+  position: sticky;
+  top: 15px;                 /* Adjust spacing from top */
+  z-index: 50;               /* Stay above content */
+  overflow: visible !important;  /* Important: don't clip buttons/popups */
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(4px);    /* Clean frosted look */
+  border-radius: 10px;
+  padding: 8px;
 }
-
