@@ -28,5 +28,7 @@
 
 /* 🧰 TOOLBAR — No scrollbars at all */
 .toolbar {
-  overflow: hidden !important;
+  overflow: hidden;
+  padding: 4px 8px;
 }
+
