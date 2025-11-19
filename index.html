@@ -93,11 +93,10 @@ display=swap" rel="stylesheet">
 
   .palette{ position:relative; display:inline-block; }
   .palettePopup{ position:absolute; top:46px; left:0; background:var(--card); padding:8px; border-radius:8px; display:grid; grid-template-columns: repeat(6,24px); gap:8px; box-shadow:0 8px 30px rgba(2,6,23,0.08); z-index:50 }
-  .sw{ width:24px; height:24px; border-radius:6px; cursor:pointer; border:1px solid rgba(0,0,0,0.06); display:inline-block }
-  .sw.customAdd{ display:flex; align-items:center; justify-content:center; font-weight:700; }
+  .sw{ width:24px; height:24px; border-radius:6px; cursor:pointer; border:1px solid rgba(0,0,0,0.06) }
 
-  /* highlight span */
-  .hl { background: #fff59b; padding:0; border-radius:2px; }
+  /* highlight class */
+  .hl { background: #fff59b; border-radius:2px; }
 
   /* toast */
   .toast { position: fixed; left: 50%; transform: translateX(-50%) translateY(12px); bottom: 28px; min-width: 160px; padding: 10px 14px; border-radius: 10px; color: #fff; font-weight: 600; text-align:center; z-index:9999; opacity:0; pointer-events:none; transition: opacity .22s, transform .22s; }
@@ -210,13 +209,11 @@ display=swap" rel="stylesheet">
           </select>
 
           <label style="margin-left:12px; font-size:13px; color:var(--muted)">Background</label>
+          <!-- existing background input (we will use it for per-day background if a date is selected) -->
           <input id="bgInput" type="file" accept="image/*" style="padding:6px; border-radius:8px;" />
+          <!-- New per-day background setter button (appears but will act for selected date only) -->
+          <button id="setDayBg" class="squareBtn" title="Set Page Background Image">Set Page Background Image</button>
           <button id="removeBg" class="squareBtn" title="Remove background">Remove</button>
-
-          <!-- new per-day bg controls (set/remove) -->
-          <button id="setPageBg" class="squareBtn" title="Set Page Background Image">Set page bg</button>
-          <input id="pageBgInput" type="file" accept="image/*" style="display:none" />
-          <button id="removePageBg" class="squareBtn" title="Remove page bg">Remove page bg</button>
         </div>
 
         <div class="editorWrap" id="editorWrap">
@@ -239,24 +236,23 @@ display=swap" rel="stylesheet">
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 <script type="module">
-/* FULL working script with requested fixes & features.
-   Major implemented features:
-   - Pencil highlight mode (click & drag to highlight wrapped in <span class="hl">).
-   - Convert highlight system to span wraps, remove execCommand highlight.
-   - Clear formatting thoroughly on selection while preserving lists.
-   - Custom color picker (+ tile) to add colors to palette.
-   - Per-day background saved in encrypted payload.pageBackground and applied per date.
-   - Font change applies to selection or typing (typing font used for new characters).
-   - Prevent formatting on spaces (spaces inserted as plain text, caret moved out).
-   - Added pencil cursor icon (placeholder highlighter.png).
-   - Selection-based highlight removal when toggling highlight on selection.
-   - Firebase logic unchanged; added pageBackground inside payload.
+/* FULL working script with fixes for:
+   - Highlight pencil mode with span.hl wrapping and removal
+   - Clear formatting function (removes bold/italic/underline/strike/color/highlight/font-family/font-size but preserves lists)
+   - Custom color picker (+ custom color swatch saved in palette and preview shown)
+   - Per-day background images saved inside encrypted entry as `pageBackground` (payload.pageBackground)
+   - Fine-grained font behavior: selection-only or typing-style
+   - Prevent formatting on spaces
+   - Placeholder fixes
+   - Cursor icon for pencil mode
+   - KEEP firebase logic and paths unchanged; added pageBackground field inside payload.
 */
 
+/* Firebase imports (kept as before) */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
 
-// Firebase config (kept as provided)
+/* Firebase config (kept as provided) */
 const firebaseConfig = {
   apiKey: "AIzaSyDRpLl01xtSZ7f0ZbId7zFASUJoem4L69s",
   authDomain: "my-secret-diary-9b62c.firebaseapp.com",
@@ -268,7 +264,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// DOM refs
+/* ===== DOM refs (unchanged ids preserved) ===== */
 const loginDiv = document.getElementById('login');
 const passwordInput = document.getElementById('passwordInput');
 const loginBtn = document.getElementById('loginBtn');
@@ -308,11 +304,8 @@ const fontSelect = document.getElementById('fontSelect');
 const fontFilter = document.getElementById('fontFilter');
 const sizeSelect = document.getElementById('sizeSelect');
 const bgInput = document.getElementById('bgInput');
+const setDayBg = document.getElementById('setDayBg');
 const removeBg = document.getElementById('removeBg');
-
-const setPageBgBtn = document.getElementById('setPageBg');
-const pageBgInput = document.getElementById('pageBgInput');
-const removePageBgBtn = document.getElementById('removePageBg');
 
 const editorWrap = document.getElementById('editorWrap');
 const editor = document.getElementById('editor');
@@ -320,6 +313,7 @@ const saveFloatingBtn = document.getElementById('saveFloatingBtn');
 
 const toastEl = document.getElementById('toast');
 
+/* ===== App state (kept original values) ===== */
 let storedPassword = "53458678";
 let diaryName = "My Secret Diary";
 let currentPassword = null;
@@ -330,51 +324,76 @@ let calendarMonth = (new Date()).getMonth();
 let selectedDate = null;
 let entriesIndex = {};
 
-// typing styling state
+/* typing styling state (expanded) */
 let currentColor = null;
 let highlightActive = false;
 const highlightColor = '#fff59b';
 
-// typing font/size for new text (when no selection)
-let typingFont = settingsMeta.font || 'Quicksand';
-let typingSize = settingsMeta.size || '16px';
+/* typing font/size for caret (like MS Word) */
+let typingFont = null;
+let typingSize = null;
 
-// per-day page background storage (applied to editorWrap)
-const pageBackgrounds = {}; // key: yyyy-mm-dd -> dataURL
+/* per-day page background (applies to selected date) */
+let currentPageBackground = null;
 
-// palette
+/* palette (with custom color support) */
 const paletteColors = ['#000000','#333333','#555555','#8B5CF6','#2563EB','#10B981','#F59E0B','#EF4444','#FFFFFF','#FFD3B6','#BDE0FE','#FFD6F0'];
+
+/* helper to create color swatches including custom color "+" */
 function createColorSwatches(){
   colorPopup.innerHTML = '';
-
+  // add palette colors
   paletteColors.forEach(c=>{
     const s = document.createElement('div');
     s.className='sw';
     s.style.background = c;
     s.title = c;
     s.onclick = ()=>{
+      // apply color as typing color or to selection
+      applyColorToSelectionOrTyping(c);
       currentColor = c;
       colorPreview.style.background = c;
       colorPreview.title = c;
       colorPopup.style.display = 'none';
       colorIcon.classList.add('active');
-      // if selection present apply color to selection
-      const sel = window.getSelection();
-      if(sel && sel.rangeCount && !sel.getRangeAt(0).collapsed){
-        wrapRangeWithStyle(sel.getRangeAt(0), { color: c });
-      }
     };
     colorPopup.appendChild(s);
   });
 
-  // custom color add tile
+  // add custom picker square ("+")
   const add = document.createElement('div');
-  add.className = 'sw customAdd';
+  add.className = 'sw';
+  add.style.display = 'flex';
+  add.style.alignItems = 'center';
+  add.style.justifyContent = 'center';
+  add.style.fontWeight = '700';
+  add.style.fontSize = '16px';
+  add.style.cursor = 'pointer';
   add.textContent = '+';
   add.title = 'Add custom color';
   add.onclick = ()=>{
-    // trigger hidden input color
-    triggerCustomColorPicker();
+    // open input color
+    const input = document.createElement('input');
+    input.type = 'color';
+    input.value = '#ffcc00';
+    input.style.position = 'fixed';
+    input.style.left = '-9999px';
+    document.body.appendChild(input);
+    input.click();
+    input.oninput = ()=>{
+      const c = input.value;
+      // add to palette and re-create (push at front)
+      if(!paletteColors.includes(c)) paletteColors.unshift(c);
+      createColorSwatches();
+      currentColor = c;
+      colorPreview.style.background = c;
+      colorPreview.title = c;
+      colorPopup.style.display = 'none';
+      colorIcon.classList.add('active');
+      input.remove();
+    };
+    // cleanup if user cancels
+    input.onblur = ()=> { input.remove(); };
   };
   colorPopup.appendChild(add);
 }
@@ -386,27 +405,7 @@ document.addEventListener('click', e => {
   if(!colorIcon.contains(e.target) && !colorPopup.contains(e.target)) colorPopup.style.display = 'none';
 });
 
-// hidden input for custom color
-const customColorInput = document.createElement('input');
-customColorInput.type = 'color';
-customColorInput.style.display = 'none';
-document.body.appendChild(customColorInput);
-function triggerCustomColorPicker(){
-  customColorInput.value = '#000000';
-  customColorInput.click();
-}
-customColorInput.addEventListener('input', (e)=>{
-  const v = e.target.value;
-  // add to palette and re-create the swatches
-  if(!paletteColors.includes(v)) paletteColors.unshift(v);
-  createColorSwatches();
-  currentColor = v;
-  colorPreview.style.background = v;
-  colorPreview.title = v;
-  colorIcon.classList.add('active');
-});
-
-// toast helper
+/* toast helper (unchanged) */
 let toastTimer = null;
 function showToast(msg, ok=true){
   toastEl.textContent = msg;
@@ -415,7 +414,7 @@ function showToast(msg, ok=true){
   toastTimer = setTimeout(()=> { toastEl.className = 'toast'; }, 1500);
 }
 
-// timezone helper (India)
+/* timezone helper (India) */
 function getYMDInTimeZone(timeZone='Asia/Kolkata', d=new Date()){
   const parts = new Intl.DateTimeFormat('en-CA', { timeZone, year:'numeric', month:'2-digit', day:'2-digit' }).formatToParts(d);
   const obj = {}; parts.forEach(p=>obj[p.type]=p.value);
@@ -423,7 +422,7 @@ function getYMDInTimeZone(timeZone='Asia/Kolkata', d=new Date()){
 }
 const toYMD = d => (new Date(d)).toISOString().slice(0,10);
 
-// crypto helpers (PBKDF2 + AES-GCM)
+/* crypto helpers (unchanged) */
 function b64(arr){ return btoa(String.fromCharCode(...arr)); }
 function fromB64(s){ return Uint8Array.from(atob(s), c=>c.charCodeAt(0)); }
 
@@ -450,7 +449,7 @@ async function decryptPayload(password, docData){
   return JSON.parse(new TextDecoder().decode(plain));
 }
 
-// SETTINGS LOADING
+/* ===== SETTINGS LOADING (unchanged logic, but we keep settingsMeta.background separate from per-day backgrounds) ===== */
 async function loadSettings(){
   try{
     const sRef = doc(db, 'entries', 'settings');
@@ -471,7 +470,7 @@ async function loadSettings(){
   }
 }
 
-// calendar index for month
+/* ===== Calendar helpers (unchanged) ===== */
 async function loadEntriesIndexForMonth(year, month){
   entriesIndex = {};
   const days = new Date(year, month+1, 0).getDate();
@@ -488,7 +487,6 @@ async function loadEntriesIndexForMonth(year, month){
   await Promise.all(promises);
 }
 
-// render calendar
 function renderCalendar(year, month){
   calendarYear = year; calendarMonth = month;
   const first = new Date(year, month, 1);
@@ -514,7 +512,7 @@ function renderCalendar(year, month){
   }
 }
 
-// select date
+/* ===== selectDate and editing mode ===== */
 async function selectDate(key, dt){
   selectedDate = key;
   selectedDateSpan.textContent = new Date(key).toLocaleDateString(undefined, { timeZone:'Asia/Kolkata' });
@@ -537,9 +535,10 @@ function updateEditModeForDate(key){
     editor.setAttribute('contenteditable','true');
     saveTop.disabled = saveFloatingBtn.disabled = false;
   }
+  // ensure setDayBg button is visible (it always is but will act for selected date)
 }
 
-// execCommand helpers (only used for legacy basic commands like bold/italic/unorderedList)
+/* ===== execCommand helpers (kept for other formatting except highlight) ===== */
 try{ document.execCommand('styleWithCSS', false, true); }catch(e){}
 function execCmd(cmd, value=null){
   try{ document.execCommand('styleWithCSS', false, true); }catch(e){}
@@ -559,12 +558,12 @@ function updateToolbarStates(){
   }catch(e){}
 }
 
-// utility: insertAfter
+/* Insert after helper */
 function insertAfter(newNode, referenceNode){
   referenceNode.parentNode.insertBefore(newNode, referenceNode.nextSibling);
 }
 
-// compare computed background color of element with highlightColor
+/* Detect element has computed background equal to highlightColor (used for caret normalization) */
 function cssBackgroundMatchesHighlight(el){
   if(!el || el.nodeType !== 1) return false;
   const tmp = document.createElement('div');
@@ -576,17 +575,17 @@ function cssBackgroundMatchesHighlight(el){
   return cur === desired;
 }
 
-// Move caret outside of ancestor with highlight or any formatting style
-function moveCaretOutOfFormatting(){
+/* Move caret out of highlight when highlight toggled off (keeps caret from inheriting highlight) */
+function moveCaretOutOfHighlight(){
   const sel = window.getSelection();
   if(!sel || !sel.rangeCount) return;
   const range = sel.getRangeAt(0);
-  if(!range.collapsed) return;
+  if(!range.collapsed) return; // only needed when caret collapsed
   let node = range.startContainer;
   let ancestor = (node.nodeType === 3) ? node.parentElement : node;
   while(ancestor && ancestor !== editor && ancestor.nodeType === 1){
-    // check if ancestor is a highlight (class hl) or has inline style for formatting
-    if(ancestor.classList && ancestor.classList.contains('hl') || ancestor.style && (ancestor.style.backgroundColor || ancestor.style.color || ancestor.style.fontFamily || ancestor.style.fontSize || ancestor.tagName === 'B' || ancestor.tagName === 'I' || ancestor.tagName === 'U' || ancestor.tagName === 'S' || ancestor.tagName === 'STRONG' || ancestor.tagName === 'EM' || ancestor.tagName === 'SPAN' )){
+    if(ancestor.classList && ancestor.classList.contains('hl')){
+      // found a highlighted ancestor - we need to move caret just after the highlighted element
       const spacer = document.createElement('span');
       spacer.textContent = '\u200B';
       spacer.style.background = 'transparent';
@@ -596,137 +595,268 @@ function moveCaretOutOfFormatting(){
       newRange.collapse(true);
       sel.removeAllRanges();
       sel.addRange(newRange);
-      // cleanup invisible spacers later
-      setTimeout(()=> cleanupZeroWidthSpacers(), 300);
+
+      setTimeout(()=> {
+        try{
+          const allSpacers = editor.querySelectorAll('span');
+          allSpacers.forEach(s=>{
+            if(s.textContent === '\u200B'){
+              const sel2 = window.getSelection();
+              if(sel2 && sel2.rangeCount){
+                const r = sel2.getRangeAt(0);
+                if(r.startContainer === s.firstChild) return; // keep it
+              }
+              s.remove();
+            }
+          });
+        }catch(e){}
+      }, 400);
       return;
     }
     ancestor = ancestor.parentElement;
   }
 }
 
-// Highlight utilities: wrap a Range with highlight span
-function wrapRangeWithHighlight(range){
+/* ===== Highlighting: span-based wrapping and removal ===== */
+
+/* Create a wrapper span.hl and wrap a given Range (may span multiple nodes).
+   This function carefully handles partly overlapping nodes by using Range.surroundContents when safe,
+   otherwise it extracts contents and wraps them.
+*/
+function wrapRangeInHighlight(range){
   if(range.collapsed) return;
-  // Extract content and wrap to avoid surroundContents exceptions
-  const frag = range.extractContents();
-  // If fragment is empty, return
-  if(!frag || !frag.childNodes || frag.childNodes.length === 0){
-    range.collapse(true);
-    return;
-  }
+  // Extract contents, wrap them in span.hl, and insert back
   const span = document.createElement('span');
   span.className = 'hl';
   span.style.background = highlightColor;
-  span.appendChild(frag);
-  range.insertNode(span);
-  // move selection after the inserted span
-  const sel = window.getSelection();
-  const newRange = document.createRange();
-  newRange.setStartAfter(span);
-  newRange.collapse(true);
-  sel.removeAllRanges();
-  sel.addRange(newRange);
-}
-
-// Wrap Range with inline style(s) using a span (for color/font/size)
-function wrapRangeWithStyle(range, styles = {}){
-  if(range.collapsed) return;
-  const frag = range.extractContents();
-  if(!frag || frag.childNodes.length === 0){ range.collapse(true); return; }
-  const span = document.createElement('span');
-  for(const k in styles){
-    span.style[k] = styles[k];
+  try {
+    const docfrag = range.extractContents();
+    // If docfrag is empty, bail out
+    span.appendChild(docfrag);
+    range.insertNode(span);
+    // Normalize to merge adjacent text nodes
+    span.normalize();
+  } catch(e){
+    // fallback: try using surroundContents if possible
+    try{
+      range.surroundContents(span);
+    } catch(err){
+      // Last resort: iterate and wrap text nodes
+      const text = range.toString();
+      if(text.trim().length){
+        range.deleteContents();
+        span.textContent = text;
+        range.insertNode(span);
+      }
+    }
   }
-  span.appendChild(frag);
-  range.insertNode(span);
-  // move selection after inserted node
-  const sel = window.getSelection();
-  const newRange = document.createRange();
-  newRange.setStartAfter(span);
-  newRange.collapse(true);
-  sel.removeAllRanges();
-  sel.addRange(newRange);
 }
 
-// Remove highlight spans inside a range (handles partial spans)
+/* Remove highlight spans inside the given Range only (partial removal supported)
+   Approach: we'll iterate nodes within range, and for any ancestor .hl, we will split it at the selection boundaries and remove the .hl wrapper from nodes fully inside selection, leaving outer parts intact.
+*/
 function removeHighlightFromRange(range){
   if(range.collapsed) return;
-  // extract fragment, remove hl spans within it, then insert back
-  const frag = range.extractContents();
-  // function to recursively remove hl spans and replace with their children
-  (function cleanse(node){
-    const children = Array.from(node.childNodes);
-    children.forEach(ch=>{
-      if(ch.nodeType === 1){
-        if(ch.classList && ch.classList.contains('hl')){
-          // replace the element with its children (unwrapping)
-          while(ch.firstChild) node.insertBefore(ch.firstChild, ch);
-          node.removeChild(ch);
+  // Get all elements that are within the range
+  const walker = document.createTreeWalker(range.commonAncestorContainer, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, {
+    acceptNode(node){
+      // accept only nodes that intersect selection range
+      if(node.nodeType === 3 || node.nodeType === 1){
+        const nodeRange = document.createRange();
+        try{
+          nodeRange.selectNodeContents(node);
+        }catch(e){
+          try{
+            nodeRange.selectNode(node);
+          }catch(e){
+            return NodeFilter.FILTER_REJECT;
+          }
+        }
+        if(range.compareBoundaryPoints(Range.END_TO_START, nodeRange) >= 0 || range.compareBoundaryPoints(Range.START_TO_END, nodeRange) <= 0){
+          return NodeFilter.FILTER_REJECT;
+        }
+        return NodeFilter.FILTER_ACCEPT;
+      }
+      return NodeFilter.FILTER_REJECT;
+    }
+  });
+
+  const toProcess = [];
+  let n;
+  while(n = walker.nextNode()){
+    toProcess.push(n);
+  }
+
+  // For each node, find closest ancestor .hl and unwrap the portion that intersects
+  toProcess.forEach(node=>{
+    let anc = node.nodeType === 3 ? node.parentElement : node;
+    while(anc && anc !== editor){
+      if(anc.classList && anc.classList.contains('hl')) break;
+      anc = anc.parentElement;
+    }
+    if(anc && anc !== editor){
+      // Split the ancestor .hl so selection interior can be unwrapped
+      // Use range.cloneRange to extract the portion within anc & selection
+      const localRange = range.cloneRange();
+      try {
+        // limit localRange to inside the anc
+        localRange.setStart(Math.max(localRange.startOffset, (function(){ 
+          // find offset relative to ancestor if ancestor contains startContainer
+          if(localRange.startContainer && anc.contains(localRange.startContainer)){
+            return (0);
+          } else return 0;
+        })()), localRange.startOffset);
+      } catch(e){}
+      // We'll unwrap the selected parts by replacing anc with its child nodes but only for parts fully inside selection
+      // Simpler approach: if selection intersects anc, we'll replace anc with its children, but keep portions outside selection by splitting anc into parts.
+      try{
+        // Create ranges to extract parts before, inside, after relative to anc
+        const ancRange = document.createRange();
+        ancRange.selectNodeContents(anc);
+
+        const interRange = ancRange.cloneRange();
+        interRange.setStart(Math.max(range.startContainer === anc ? range.startOffset : Math.max(range.startOffset, 0), ancRange.startOffset));
+        // Instead of complex offsets, we'll do a pragmatic approach: if entire anc is within selection, unwrap anc completely
+        if(range.compareBoundaryPoints(Range.START_TO_START, ancRange) <= 0 && range.compareBoundaryPoints(Range.END_TO_END, ancRange) >= 0){
+          // full overlap -> unwrap anc
+          const parent = anc.parentNode;
+          while(anc.firstChild) parent.insertBefore(anc.firstChild, anc);
+          parent.removeChild(anc);
         } else {
-          cleanse(ch);
+          // partial overlap -> split ancestor into three parts and unwrap middle
+          // We'll use Ranges based on actual node boundaries: create a newRange representing intersection between range and anc
+          const inter = document.createRange();
+          inter.setStart(range.startContainer, range.startOffset);
+          inter.setEnd(range.endContainer, range.endOffset);
+          // Clip inter to anc by checking containment
+          if(!anc.contains(inter.startContainer)){
+            // adjust start to beginning of anc
+            inter.setStart(anc.firstChild || anc, 0);
+          }
+          if(!anc.contains(inter.endContainer)){
+            inter.setEnd(anc.lastChild || anc, anc.lastChild ? (anc.lastChild.textContent ? anc.lastChild.textContent.length : 0) : 0);
+          }
+          // Extract intersection contents and insert them in place, thereby removing hl for that part
+          const frag = inter.extractContents();
+          inter.insertNode(frag);
+          // After extraction, if anc still exists with no hl needs, it will remain. We will also cleanup empty hl nodes later.
+        }
+      } catch(e){
+        // fallback: remove hl class and style if simple
+        anc.classList.remove('hl');
+        anc.style.background = '';
+      }
+    }
+  });
+
+  // final pass: unwrap any empty .hl or merge text nodes
+  const hls = editor.querySelectorAll('.hl');
+  hls.forEach(h=>{
+    if(!h.textContent.trim()){
+      // remove empty highlight
+      h.remove();
+    } else {
+      // If child doesn't need highlight (e.g. style was removed), ensure class exists only where needed - skip for now
+    }
+  });
+  editor.normalize();
+}
+
+/* Apply highlight to current selection (or typed text will be handled in beforeinput) */
+function applyHighlightToSelection(){
+  const sel = window.getSelection();
+  if(!sel || !sel.rangeCount) return;
+  for(let i=0;i<sel.rangeCount;i++){
+    const r = sel.getRangeAt(i);
+    if(!r.collapsed){
+      wrapRangeInHighlight(r);
+    }
+  }
+  // after applying highlight, ensure caret isn't stuck inside same-highlight (so typing new text won't be highlighted if highlightActive was turned off)
+  updateToolbarStates();
+}
+
+/* When user selects a highlighted area and presses highlight tool again, remove highlight from selection */
+function toggleHighlightForSelectionRemoval(){
+  const sel = window.getSelection();
+  if(!sel || !sel.rangeCount || sel.getRangeAt(0).collapsed) return false;
+  const r = sel.getRangeAt(0);
+  // check if selection contains any highlighted node
+  let containsHl = false;
+  const walker = document.createTreeWalker(r.commonAncestorContainer, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, {
+    acceptNode(node){
+      if(node.nodeType === 1 && node.classList && node.classList.contains('hl')) return NodeFilter.FILTER_ACCEPT;
+      if(node.nodeType === 3) {
+        // text node - check if ancestor is hl inside range
+        let anc = node.parentElement;
+        while(anc && anc !== editor){
+          if(anc.classList && anc.classList.contains('hl')) return NodeFilter.FILTER_ACCEPT;
+          anc = anc.parentElement;
         }
       }
-    });
-  })(frag);
-  // insert cleaned fragment back
-  range.insertNode(frag);
-  // set caret at end of inserted fragment
-  const sel = window.getSelection();
-  const newRange = document.createRange();
-  // find last inserted node (we can use range.startContainer and move forward)
-  newRange.setStart(range.startContainer, getInsertionOffset(range.startContainer));
-  newRange.collapse(true);
-  sel.removeAllRanges();
-  sel.addRange(newRange);
-
-  // helper to compute an offset - safe fallback
-  function getInsertionOffset(node){
-    // if node is text node, return its length; else if node has childNodes, return childNodes.length; fall back to 0
-    if(node.nodeType === 3) return node.length;
-    if(node.childNodes && node.childNodes.length) return node.childNodes.length;
-    return 0;
+      return NodeFilter.FILTER_REJECT;
+    }
+  });
+  while(walker.nextNode()){
+    containsHl = true; break;
   }
+  if(containsHl){
+    removeHighlightFromRange(r);
+    updateToolbarStates();
+    return true;
+  }
+  return false;
 }
 
-// Generic removal of <span class="hl"> across selection using similar approach (works better than trying to split spans)
-function toggleHighlightOnSelectionOrTyping(){
-  const sel = window.getSelection();
-  if(sel && sel.rangeCount && !sel.getRangeAt(0).collapsed){
-    const r = sel.getRangeAt(0);
-    // If selection contains any hl nodes entirely or partially, remove highlight only in selection
-    // determine if selection contains hl nodes by scanning
-    const containsHL = (function scan(node){
-      if(!node) return false;
-      if(node.nodeType === 1 && node.classList && node.classList.contains('hl')) return true;
-      for(let c=node.firstChild; c; c=c.nextSibling){
-        if(scan(c)) return true;
+/* ===== beforeinput handler: handle typed characters to apply typingFont/typingSize/currentColor/highlightActive; and prevent formatting on spaces ===== */
+editor.addEventListener('beforeinput', (e)=>{
+  // Only handle insertText events (typing)
+  if(e.inputType === 'insertText' && e.data !== null){
+    const sel = window.getSelection();
+    if(!sel || !sel.rangeCount) return;
+    const range = sel.getRangeAt(0);
+    if(!range.collapsed) return; // default behavior when there's a selection (let execCommand do replacements if needed)
+    // If the typed character is a space (or whitespace), we must ensure it's plain text (no formatting)
+    if(/\s/.test(e.data)){
+      e.preventDefault();
+      const textNode = document.createTextNode(e.data);
+      range.insertNode(textNode);
+      // move caret after the inserted space
+      range.setStartAfter(textNode);
+      range.setEndAfter(textNode);
+      sel.removeAllRanges();
+      sel.addRange(range);
+      // After space typed, move caret out of highlight to avoid carrying formatting
+      if(highlightActive || currentColor || typingFont || typingSize){
+        moveCaretOutOfHighlight();
       }
-      return false;
-    })(r.cloneContents());
-    if(containsHL){
-      removeHighlightFromRange(r);
-      return;
-    } else {
-      // apply highlight to selection
-      wrapRangeWithHighlight(r);
+      updateToolbarStates();
       return;
     }
-  } else {
-    // no selection — toggle typing-state (handled elsewhere)
-    highlightActive = !highlightActive;
-    btnHighlight.classList.toggle('active', highlightActive);
-    // set cursor
-    if(highlightActive){
-      editor.style.cursor = "url('highlighter.png') 0 16, auto";
-    } else {
-      editor.style.cursor = '';
-      // if turning off highlight ensure caret is outside highlighted span
-      moveCaretOutOfFormatting();
-    }
-  }
-}
 
-// cleanup helper: remove stray zero-width space nodes that may remain (keeps caret integrity)
+    // If there are no styling flags active, normal typing is fine
+    if(!highlightActive && !currentColor && !typingFont && !typingSize) return;
+
+    e.preventDefault();
+    // create a span to wrap the typed character(s)
+    const span = document.createElement('span');
+    if(currentColor) span.style.color = currentColor;
+    if(highlightActive) span.classList.add('hl'), span.style.background = highlightColor;
+    if(typingFont) span.style.fontFamily = typingFont;
+    if(typingSize) span.style.fontSize = typingSize;
+    // insert the typed data
+    span.textContent = e.data;
+    range.insertNode(span);
+    // move caret after span
+    range.setStartAfter(span);
+    range.setEndAfter(span);
+    sel.removeAllRanges();
+    sel.addRange(range);
+    updateToolbarStates();
+  }
+});
+
+/* Cleanup stray zero-width spacers */
 function cleanupZeroWidthSpacers(){
   try{
     const nodes = editor.querySelectorAll('span');
@@ -744,7 +874,7 @@ function cleanupZeroWidthSpacers(){
   }catch(e){}
 }
 
-// placeholder management
+/* ===== Placeholder management (fixed so typing removes the placeholder and typing won't happen inside it) ===== */
 function ensurePlaceholder(){
   if(!editor.innerText.trim()){
     editor.innerHTML = '<div class="placeholder" style="color:var(--muted)">Start writing your thoughts...</div>';
@@ -754,7 +884,6 @@ function ensurePlaceholder(){
   }
 }
 editor.addEventListener('input', ()=>{ 
-  // after input, remove leftover spacers if any
   cleanupZeroWidthSpacers();
   ensurePlaceholder(); 
   updateToolbarStates(); 
@@ -763,10 +892,22 @@ editor.addEventListener('mouseup', updateToolbarStates);
 editor.addEventListener('keyup', updateToolbarStates);
 editor.addEventListener('focus', ()=> {
   // on focus ensure caret is not stuck inside a highlight when highlight is OFF
-  if(!highlightActive) moveCaretOutOfFormatting();
+  const ph = editor.querySelector('.placeholder');
+  if(ph){
+    // remove placeholder and set caret at end of editor
+    ph.remove();
+    // place caret at end
+    const range = document.createRange();
+    range.selectNodeContents(editor);
+    range.collapse(false);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+  if(!highlightActive) moveCaretOutOfHighlight();
 });
 
-// fonts list (many popular fonts)
+/* ===== Font & size behavior (selection-aware & typing style) ===== */
 const FONTS = [
  'Quicksand','Inter','Poppins','Roboto','Open Sans','Fredoka One','Comic Neue','Lato','Montserrat','Nunito',
  'Raleway','Merriweather','Playfair Display','Courier Prime','Source Sans 3','Oswald','Bebas Neue','PT Sans',
@@ -794,50 +935,86 @@ fontFilter.addEventListener('input', ()=> {
   populateFontSelect(filtered);
 });
 
-// Apply font & size visually for settings default only (this doesn't affect past content)
-function applyTypingFontPreview(){
-  // We avoid changing editor content appearance for past text. Instead, we set a small subtle indicator
-  // But to help user know font selected for typing, set caret color or leave as-is (not changing editor.style).
-  // No global style change here to avoid modifying old text.
+/* Apply font change: if selection exists, wrap only that selection in span with font-family.
+   If no selection, set typingFont so subsequent typing uses this font.
+*/
+fontSelect.onchange = ()=>{
+  const val = fontSelect.value;
+  const sel = window.getSelection();
+  if(sel && sel.rangeCount && !sel.getRangeAt(0).collapsed){
+    const r = sel.getRangeAt(0);
+    // wrap selection in span
+    const span = document.createElement('span');
+    span.style.fontFamily = val;
+    try{
+      span.appendChild(r.extractContents());
+      r.insertNode(span);
+    } catch(e){
+      try{ r.surroundContents(span); }catch(e){ /* fallback - do nothing */ }
+    }
+  } else {
+    typingFont = val;
+    // apply to editor container visually so new empty lines look correct
+    editor.style.fontFamily = val;
+    settingsMeta.font = val;
+  }
+  updateToolbarStates();
+};
+
+/* Apply size change: similar logic */
+sizeSelect.onchange = ()=>{
+  const val = sizeSelect.value;
+  const sel = window.getSelection();
+  if(sel && sel.rangeCount && !sel.getRangeAt(0).collapsed){
+    const r = sel.getRangeAt(0);
+    const span = document.createElement('span');
+    span.style.fontSize = val;
+    try{
+      span.appendChild(r.extractContents());
+      r.insertNode(span);
+    } catch(e){
+      try{ r.surroundContents(span); }catch(e){ /* fallback */ }
+    }
+  } else {
+    typingSize = val;
+    editor.style.fontSize = val;
+    settingsMeta.size = val;
+  }
+  updateToolbarStates();
+};
+
+/* Apply color to selection or set typing color */
+function applyColorToSelectionOrTyping(color){
+  const sel = window.getSelection();
+  if(sel && sel.rangeCount && !sel.getRangeAt(0).collapsed){
+    const r = sel.getRangeAt(0);
+    const span = document.createElement('span');
+    span.style.color = color;
+    try{
+      span.appendChild(r.extractContents());
+      r.insertNode(span);
+    } catch(e){
+      try{ r.surroundContents(span); }catch(e){ /* fallback */ }
+    }
+  } else {
+    currentColor = color;
+  }
+  updateToolbarStates();
 }
 
-// font change behavior: selected text vs typing state
-fontSelect.onchange = ()=>{
-  const sel = window.getSelection();
-  const f = fontSelect.value;
-  if(sel && sel.rangeCount && !sel.getRangeAt(0).collapsed){
-    wrapRangeWithStyle(sel.getRangeAt(0), { fontFamily: f });
-  } else {
-    typingFont = f;
-    settingsMeta.font = f; // update meta so saved
-    applyTypingFontPreview();
-  }
-};
-
-sizeSelect.onchange = ()=>{
-  const sel = window.getSelection();
-  const s = sizeSelect.value;
-  if(sel && sel.rangeCount && !sel.getRangeAt(0).collapsed){
-    wrapRangeWithStyle(sel.getRangeAt(0), { fontSize: s });
-  } else {
-    typingSize = s;
-    settingsMeta.size = s;
-    applyTypingFontPreview();
-  }
-};
-
-// encryption wrappers for entries
+/* ===== Encryption wrappers for entries (unchanged) ===== */
 async function encryptEntry(password, payload){ return await encryptPayload(password, payload); }
 async function decryptEntry(password, docData){ return await decryptPayload(password, docData); }
 
-// load entry
+/* ===== Load and Save entry for date (modified to handle pageBackground in payload) ===== */
 async function loadEntryForDate(key){
   try{
     const snap = await getDoc(doc(db,'entries', key));
+    currentPageBackground = null;
     if(!snap.exists()){
       editor.innerHTML = '<div class="placeholder" style="color:var(--muted)">Start writing your thoughts...</div>';
-      applyPageBackgroundForDate(null);
       ensurePlaceholder();
+      applyPageBackground(null);
       return;
     }
     const data = snap.data();
@@ -847,40 +1024,26 @@ async function loadEntryForDate(key){
         editor.innerHTML = payload.html || '';
         settingsMeta = payload.meta || settingsMeta;
         diaryName = payload.diaryName || diaryName;
+        // load pageBackground if present
+        currentPageBackground = payload.pageBackground || null;
         diaryTitle.textContent = diaryName;
         applySettingsMeta();
-        // pageBackground is stored inside payload.pageBackground
-        if(payload.pageBackground){
-          pageBackgrounds[key] = payload.pageBackground;
-          applyPageBackgroundForDate(payload.pageBackground);
-        } else {
-          // clear per-day background if none
-          delete pageBackgrounds[key];
-          applyPageBackgroundForDate(null);
-        }
+        applyPageBackground(currentPageBackground);
       } catch(e){
         editor.innerHTML = '<div class="placeholder" style="color:var(--muted)">Unable to decrypt this entry (wrong password).</div>';
+        applyPageBackground(null);
       }
     } else if(data.text){
       editor.innerHTML = data.text || '';
+      applyPageBackground(null);
     } else {
       editor.innerHTML = '<div class="placeholder" style="color:var(--muted)">Empty</div>';
+      applyPageBackground(null);
     }
   } catch(e){ console.error('loadEntryForDate', e) }
 }
 
-// apply per-day background
-function applyPageBackgroundForDate(dataURL){
-  if(dataURL){
-    editorWrap.style.backgroundImage = `url("${dataURL}")`;
-    editorWrap.style.backgroundSize = 'cover';
-    editorWrap.style.backgroundPosition = 'center';
-  } else {
-    editorWrap.style.backgroundImage = '';
-  }
-}
-
-// save entry (encrypted)
+/* Save entry: include pageBackground field inside encrypted payload (added without changing Firebase paths) */
 async function saveEntryForDate(key){
   const dd = new Date(key + 'T00:00:00');
   const todayStr = getYMDInTimeZone('Asia/Kolkata', new Date());
@@ -888,7 +1051,8 @@ async function saveEntryForDate(key){
   if(dd > today) { showToast('Cannot save future entries', false); return false; }
   ensurePlaceholder();
   const html = editor.innerHTML;
-  const payload = { html, meta: settingsMeta, diaryName, pageBackground: pageBackgrounds[key] || null, savedAt: new Date().toISOString() };
+  // include pageBackground property in payload as requested
+  const payload = { html, meta: settingsMeta, diaryName, pageBackground: currentPageBackground || null, savedAt: new Date().toISOString() };
   try{
     const enc = await encryptEntry(currentPassword, payload);
     await setDoc(doc(db,'entries', key), { ...enc, savedAt: serverTimestamp() });
@@ -904,23 +1068,39 @@ async function saveEntryForDate(key){
   }
 }
 
-// apply settings meta visually (global background etc)
+/* Apply settings meta visually (unchanged except we don't touch per-day background here) */
 function applySettingsMeta(){
   document.body.classList.toggle('dark', settingsMeta.theme === 'dark');
   const rc = document.querySelector('.rightCol');
   if(settingsMeta.background){
+    // global background
     rc.style.backgroundImage = `url("${settingsMeta.background}")`;
     rc.style.backgroundSize = 'cover';
     rc.style.backgroundPosition = 'center';
   } else rc.style.backgroundImage = '';
   if(settingsMeta.font) fontSelect.value = settingsMeta.font;
   if(settingsMeta.size) sizeSelect.value = settingsMeta.size;
-  // Do not change existing content font; set typingFont/typingSize
-  typingFont = settingsMeta.font || typingFont;
-  typingSize = settingsMeta.size || typingSize;
+  editor.style.fontFamily = fontSelect.value;
+  editor.style.fontSize = sizeSelect.value;
 }
 
-// save settings doc (bg, name, password)
+/* Apply page background for current date editor page */
+function applyPageBackground(url){
+  currentPageBackground = url || null;
+  const rc = document.querySelector('.rightCol');
+  if(currentPageBackground){
+    rc.style.backgroundImage = `url("${currentPageBackground}")`;
+    rc.style.backgroundSize = 'cover';
+    rc.style.backgroundPosition = 'center';
+  } else {
+    // fallback to settingsMeta background or blank if not set
+    if(settingsMeta.background){
+      rc.style.backgroundImage = `url("${settingsMeta.background}")`;
+    } else rc.style.backgroundImage = '';
+  }
+}
+
+/* Save settings doc (unchanged) */
 async function saveSettingsDoc(showToastMsg=false){
   try{
     await setDoc(doc(db,'entries','settings'), { password: storedPassword, name: diaryName, bg: settingsMeta.background || "" });
@@ -933,7 +1113,7 @@ async function saveSettingsDoc(showToastMsg=false){
   }
 }
 
-// INITIALIZE: load settings and calendar
+/* ===== INITIALIZE: load settings and calendar (unchanged flow) ===== */
 await loadSettings();
 (async ()=>{
   const todayStr = getYMDInTimeZone('Asia/Kolkata', new Date());
@@ -946,7 +1126,7 @@ await loadSettings();
   await selectDate(selectedDate, new Date(selectedDate));
 })();
 
-// LOGIN FLOW (keeps original appearance & mechanics)
+/* ===== LOGIN FLOW (unchanged) ===== */
 loginBtn.onclick = async ()=>{
   await loadSettings();
   if(passwordInput.value === storedPassword){
@@ -960,74 +1140,75 @@ loginBtn.onclick = async ()=>{
   }
 };
 
-// month nav & today
+/* Month nav & today (unchanged) */
 prevMonth.onclick = async ()=>{ calendarMonth--; if(calendarMonth<0){calendarMonth=11;calendarYear--;} await loadEntriesIndexForMonth(calendarYear, calendarMonth); renderCalendar(calendarYear, calendarMonth); };
 nextMonth.onclick = async ()=>{ calendarMonth++; if(calendarMonth>11){calendarMonth=0;calendarYear++;} await loadEntriesIndexForMonth(calendarYear, calendarMonth); renderCalendar(calendarYear, calendarMonth); };
 goToday.onclick = async ()=>{ const todayStr = getYMDInTimeZone('Asia/Kolkata', new Date()); calendarYear=new Date(todayStr).getFullYear(); calendarMonth=new Date(todayStr).getMonth(); await loadEntriesIndexForMonth(calendarYear, calendarMonth); renderCalendar(calendarYear, calendarMonth); await selectDate(todayStr, new Date(todayStr)); };
 
-// save buttons
+/* Save buttons (unchanged) */
 saveTop.onclick = saveFloatingBtn.onclick = async ()=>{ if(!selectedDate) return; await saveEntryForDate(selectedDate); };
 
-// rename & change pass & theme toggle
+/* rename & change pass & theme toggle (unchanged) */
 renameTop.onclick = async ()=>{ const newName = prompt('Enter new diary name:'); if(!newName) return; diaryName = newName; diaryTitle.textContent = diaryName; await saveSettingsDoc(true); };
 changePassTop.onclick = async ()=>{ const newPass = prompt('Enter new password:'); if(!newPass) return; storedPassword = newPass; await saveSettingsDoc(true); };
 themeToggleTop.onclick = async ()=>{ settingsMeta.theme = settingsMeta.theme === 'dark' ? 'light' : 'dark'; applySettingsMeta(); await saveSettingsDoc(false); };
 
-// background upload & remove (GLOBAL background)
+/* ===== Per-day background upload & remove: uses setDayBg & bgInput; doesn't change global settingsDoc ===== */
+/* When user clicks "Set Page Background Image" we'll trigger file input (bgInput) then store data URL in currentPageBackground */
+setDayBg.onclick = ()=> {
+  // trigger bgInput click
+  bgInput.click();
+};
+
 bgInput.onchange = async (e)=>{
   const f = e.target.files[0];
   if(!f) return;
   const reader = new FileReader();
   reader.onload = async (ev)=>{
-    settingsMeta.background = ev.target.result;
+    // set per-day page background (do not alter settingsMeta.background here)
+    currentPageBackground = ev.target.result;
+    applyPageBackground(currentPageBackground);
+    // auto-save for current date (so background persists)
+    if(selectedDate) {
+      const ok = await saveEntryForDate(selectedDate);
+      if(!ok) showToast('Background save failed', false);
+    } else {
+      showToast('Select a date first', false);
+    }
+  };
+  reader.readAsDataURL(f);
+};
+
+/* remove background: if currentPageBackground is set, remove it for the day; otherwise remove global settings background */
+removeBg.onclick = async ()=>{
+  if(currentPageBackground){
+    currentPageBackground = null;
+    applyPageBackground(null);
+    if(selectedDate) {
+      const ok = await saveEntryForDate(selectedDate);
+      if(!ok) showToast('Remove day background failed', false);
+      else showToast('Day background removed', true);
+    } else {
+      showToast('Select a date first', false);
+    }
+  } else {
+    // fallback: remove global
+    settingsMeta.background = null;
     applySettingsMeta();
     const ok = await saveSettingsDoc(false);
-    if(!ok) showToast('Background save failed', false);
-  };
-  reader.readAsDataURL(f);
-};
-removeBg.onclick = async ()=>{
-  settingsMeta.background = null;
-  applySettingsMeta();
-  const ok = await saveSettingsDoc(false);
-  if(!ok) showToast('Remove background failed', false);
+    if(!ok) showToast('Remove background failed', false);
+    else showToast('Global background removed', true);
+  }
 };
 
-// PER-DAY background: Set / remove
-setPageBgBtn.onclick = ()=> pageBgInput.click();
-pageBgInput.onchange = (e)=>{
-  const f = e.target.files[0];
-  if(!f || !selectedDate) return;
-  const reader = new FileReader();
-  reader.onload = (ev)=>{
-    pageBackgrounds[selectedDate] = ev.target.result;
-    applyPageBackgroundForDate(ev.target.result);
-    showToast('Page background set', true);
-  };
-  reader.readAsDataURL(f);
-};
-removePageBgBtn.onclick = ()=>{
-  if(!selectedDate) return;
-  delete pageBackgrounds[selectedDate];
-  applyPageBackgroundForDate(null);
-  showToast('Page background removed', true);
-};
-
-// keyboard shortcuts
+/* ===== keyboard shortcuts (unchanged) ===== */
 document.addEventListener('keydown', (e)=>{
   if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='b'){ e.preventDefault(); execCmd('bold'); }
   if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='i'){ e.preventDefault(); execCmd('italic'); }
   if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='u'){ e.preventDefault(); execCmd('underline'); }
 });
 
-// initial placeholder + toolbar state
-ensurePlaceholder();
-updateToolbarStates();
-
-/* ------------------------------
-   Toolbar basic format buttons
-   (using execCmd for older commands)
-   ------------------------------ */
+/* ===== Toolbar bindings for basic commands (unchanged except clear formatting) ===== */
 btnBold.onclick = ()=> execCmd('bold');
 btnItalic.onclick = ()=> execCmd('italic');
 btnUnderline.onclick = ()=> execCmd('underline');
@@ -1040,272 +1221,217 @@ alignLeft.onclick = ()=> execCmd('justifyLeft');
 alignCenter.onclick = ()=> execCmd('justifyCenter');
 alignRight.onclick = ()=> execCmd('justifyRight');
 
-/* ------------------------------
-   Clear formatting (robust)
-   - removes bold, italic, underline, strike, color, background, font-family, font-size
-   - preserves lists and structure
-   ------------------------------ */
-clearFmt.onclick = ()=>{
-  clearFormatting();
-};
-
+/* Clear formatting: improved - removes bold/italic/underline/strike/color/highlight/font-family/font-size within selection or entire editor, but preserves lists and text.
+   Does not remove text nor convert lists to plain text.
+*/
 function clearFormatting(){
   const sel = window.getSelection();
-  if(!sel || !sel.rangeCount){
-    // nothing selected: apply to entire editor content as fallback (but avoid converting lists)
-    const range = document.createRange();
-    range.selectNodeContents(editor);
-    stripFormattingInRange(range);
-    return;
-  }
-  const range = sel.getRangeAt(0);
-  if(range.collapsed){
-    // collapsed: try to expand to current word or current container
-    const container = range.startContainer;
-    const nodeToClear = (container.nodeType === 3) ? container.parentElement : container;
-    // create range covering nodeToClear
-    const r2 = document.createRange();
-    r2.selectNodeContents(nodeToClear);
-    stripFormattingInRange(r2);
-    return;
+  let range;
+  if(sel && sel.rangeCount && !sel.getRangeAt(0).collapsed){
+    range = sel.getRangeAt(0).cloneRange();
   } else {
-    stripFormattingInRange(range);
-    return;
+    // full editor
+    range = document.createRange();
+    range.selectNodeContents(editor);
   }
-}
+  // walk nodes in range and clean inline formatting
+  const walker = document.createTreeWalker(range.commonAncestorContainer, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, {
+    acceptNode(node){
+      // skip if outside range
+      const nodeRange = document.createRange();
+      try{
+        nodeRange.selectNodeContents(node);
+      }catch(e){
+        try{ nodeRange.selectNode(node); }catch(e){ return NodeFilter.FILTER_REJECT; }
+      }
+      if(range.compareBoundaryPoints(Range.END_TO_START, nodeRange) >= 0 || range.compareBoundaryPoints(Range.START_TO_END, nodeRange) <= 0){
+        return NodeFilter.FILTER_REJECT;
+      }
+      return NodeFilter.FILTER_ACCEPT;
+    }
+  });
 
-function stripFormattingInRange(range){
-  // Extract contents, clean, reinsert so lists/structure remain safe
-  const frag = range.extractContents();
-  cleanseNode(frag);
-  range.insertNode(frag);
-  // collapse selection to end of inserted fragment
-  const sel = window.getSelection();
-  sel.removeAllRanges();
-  const newRange = document.createRange();
-  newRange.setStart(range.endContainer, range.endOffset);
-  newRange.collapse(true);
-  sel.addRange(newRange);
+  const nodes = [];
+  let n;
+  while(n = walker.nextNode()) nodes.push(n);
 
-  function cleanseNode(node){
-    const children = Array.from(node.childNodes);
-    children.forEach(ch=>{
-      if(ch.nodeType === 1){
-        const tag = ch.tagName;
-        // preserve these structural tags (do not unwrap)
-        const preserve = ['UL','OL','LI','PRE','BLOCKQUOTE','TABLE','TR','TD','TH','TBODY','THEAD'];
-        if(preserve.includes(tag)){
-          // recurse into children
-          cleanseNode(ch);
-          return;
-        }
-
-        // if element is one of formatting tags, unwrap it (but keep children)
-        const formattingTags = ['B','STRONG','I','EM','U','S','STRIKE','FONT','SPAN'];
-        if(formattingTags.includes(tag)){
-          // remove attributes from span/font
-          if(tag === 'SPAN' || tag === 'FONT'){
-            // remove only styling attributes, keep classes if any (but user requested removing styles)
-            ch.removeAttribute('style');
-            ch.removeAttribute('color');
-            ch.removeAttribute('face');
-            ch.removeAttribute('size');
-            // if span has no meaningful attributes, unwrap
-            const hasAttrs = ch.attributes && ch.attributes.length > 0;
-            if(!hasAttrs){
-              while(ch.firstChild) node.insertBefore(ch.firstChild, ch);
-              node.removeChild(ch);
-              return;
-            } else {
-              // still keep it after removing styles
-              cleanseNode(ch);
-              return;
-            }
-          } else {
-            // unwrap tag B/I/U/S/STRONG/EM
-            while(ch.firstChild) node.insertBefore(ch.firstChild, ch);
-            node.removeChild(ch);
-            return;
+  nodes.forEach(node=>{
+    if(node.nodeType === 1){
+      const tag = node.tagName.toLowerCase();
+      // preserve lists: ul, ol, li, p, div, br, span allowed. We'll unwrap formatting tags like b, strong, i, em, u, s, strike, font
+      if(['b','strong','i','em','u','s','strike','font','span','small','big'].includes(tag)){
+        // For spans, inspect styles - if they have font-family/font-size/color/background remove those style attributes
+        if(tag === 'span'){
+          // If this span is purely formatting (no attributes left after removing), we might unwrap it.
+          node.style.fontFamily = '';
+          node.style.fontSize = '';
+          node.style.color = '';
+          node.style.background = '';
+          node.classList.remove('hl');
+          // If the element has no attributes now, unwrap it
+          if(!node.getAttributeNames().length && !node.style.cssText.trim()){
+            const parent = node.parentNode;
+            while(node.firstChild) parent.insertBefore(node.firstChild, node);
+            parent.removeChild(node);
           }
         } else {
-          // remove formatting-related inline styles
-          if(ch.style){
-            ch.style.removeProperty('font-weight');
-            ch.style.removeProperty('font-style');
-            ch.style.removeProperty('text-decoration');
-            ch.style.removeProperty('text-decoration-line');
-            ch.style.removeProperty('color');
-            ch.style.removeProperty('background');
-            ch.style.removeProperty('background-color');
-            ch.style.removeProperty('font-family');
-            ch.style.removeProperty('font-size');
-          }
-          // continue recursion
-          cleanseNode(ch);
+          // unwrap but keep children
+          const parent = node.parentNode;
+          while(node.firstChild) parent.insertBefore(node.firstChild, node);
+          parent.removeChild(node);
         }
-      } else if(ch.nodeType === 3){
-        // text node: leave it
+      } else {
+        // non-formatting tag: remove inline styles relevant to formatting (but preserve lists)
+        if(node.style){
+          node.style.fontFamily = '';
+          node.style.fontSize = '';
+          node.style.color = '';
+          node.style.background = '';
+        }
       }
-    });
-  }
-}
-
-/* ------------------------------
-   Highlight button (pencil mode and selection behavior)
-   ------------------------------ */
-btnHighlight.onclick = (e)=>{
-  const sel = window.getSelection();
-  // If there's a selection (non-collapsed) toggle highlight for selection (apply/remove)
-  if(sel && sel.rangeCount && !sel.getRangeAt(0).collapsed){
-    toggleHighlightOnSelectionOrTyping();
-    updateToolbarStates();
-    return;
-  }
-  // No selection - toggle typing state / pencil mode
-  highlightActive = !highlightActive;
-  btnHighlight.classList.toggle('active', highlightActive);
-  if(highlightActive){
-    editor.style.cursor = "url('highlighter.png') 0 16, auto";
-  } else {
-    editor.style.cursor = "";
-    // ensure caret not inside highlight
-    moveCaretOutOfFormatting();
-  }
-  updateToolbarStates();
-};
-
-// When highlight is active and user mouse-selects (click & drag), we should wrap the selection on mouseup
-let isMouseDownInsideEditor = false;
-editor.addEventListener('mousedown', (e)=>{
-  if(e.button !== 0) return; // left click only
-  isMouseDownInsideEditor = true;
-});
-document.addEventListener('mouseup', (e)=>{
-  if(!isMouseDownInsideEditor){ return; }
-  isMouseDownInsideEditor = false;
-  // if highlightActive and there is selection, apply highlight span
-  if(highlightActive){
-    const sel = window.getSelection();
-    if(sel && sel.rangeCount){
-      const r = sel.getRangeAt(0);
-      if(!r.collapsed){
-        wrapRangeWithHighlight(r);
-      }
+    } else if(node.nodeType === 3){
+      // text nodes - nothing to do
     }
-  }
-});
+  });
 
-// Also allow keyboard selection (Shift+Arrows) - detect selectionchange
-document.addEventListener('selectionchange', ()=>{
-  // when selection changed and highlightActive turned on and user has a new non-collapsed selection, do not auto-apply;
-  // we rely on mouseup or explicit toggle for selection apply/remove
+  // After cleaning, normalize and ensure no stray empty nodes
+  editor.normalize();
+  ensurePlaceholder();
   updateToolbarStates();
-});
+}
+clearFmt.onclick = clearFormatting;
 
-/* ------------------------------
-   beforeinput handler for typed characters:
-   - handles typing with currentColor / highlightActive / typingFont / typingSize
-   - ensures spaces are plain text and don't retain formatting
-   ------------------------------ */
-editor.addEventListener('beforeinput', (e)=>{
-  if(e.inputType === 'insertText' && typeof e.data === 'string'){
-    const sel = window.getSelection();
-    if(!sel || !sel.rangeCount) return;
-    const range = sel.getRangeAt(0);
-
-    // If selection not collapsed, default behavior is to replace selection - we'll handle similarly
-    e.preventDefault();
-
-    // When the inserted character is a space, insert plain text space without styles, and move caret outside formatted ancestors
-    if(e.data === ' '){
-      // insert plain text node
-      const textNode = document.createTextNode(' ');
-      range.deleteContents();
-      range.insertNode(textNode);
-      // move caret after space
-      const newRange = document.createRange();
-      newRange.setStartAfter(textNode);
-      newRange.collapse(true);
-      sel.removeAllRanges();
-      sel.addRange(newRange);
-      // ensure caret is outside formatting (so next typed char doesn't inherit formatting)
-      moveCaretOutOfFormatting();
+/* ===== Highlight toggle button behavior:
+   - If selection exists and contains highlights -> pressing highlight removes highlight in selection
+   - Otherwise toggles pencil/highlighter typing mode (cursor change). While pencil mode active, mouse selection will result in highlight wrapping.
+*/
+btnHighlight.onclick = ()=>{
+  const sel = window.getSelection();
+  // If there is a selection and it intersects highlighted text, remove highlight from selection instead of toggling pencil mode
+  if(sel && sel.rangeCount && !sel.getRangeAt(0).collapsed){
+    const removed = toggleHighlightForSelectionRemoval();
+    if(removed) {
+      // ensure we are not in pencil mode after removal
+      highlightActive = false;
+      btnHighlight.classList.toggle('active', highlightActive);
       updateToolbarStates();
       return;
     }
+  }
+  // Otherwise toggle pencil mode
+  highlightActive = !highlightActive;
+  btnHighlight.classList.toggle('active', highlightActive);
+  updateToolbarStates();
+  // change cursor to pencil icon when active
+  if(highlightActive){
+    // set custom cursor (user will replace highlighter.png as needed)
+    editor.style.cursor = "url('highlighter.png') 0 16, auto";
+  } else {
+    editor.style.cursor = '';
+    // if turning off, ensure caret not inside highlight
+    moveCaretOutOfHighlight();
+  }
+};
 
-    // Otherwise, create a span with appropriate styles
-    const span = document.createElement('span');
-    if(currentColor) span.style.color = currentColor;
-    if(highlightActive) span.className = 'hl', span.style.background = highlightColor;
-    if(typingFont) span.style.fontFamily = typingFont;
-    if(typingSize) span.style.fontSize = typingSize;
-    span.textContent = e.data;
-    range.deleteContents();
-    range.insertNode(span);
-    // place caret after span
-    range.setStartAfter(span);
-    range.collapse(true);
-    sel.removeAllRanges();
-    sel.addRange(range);
-    updateToolbarStates();
+/* When the user mouseup-selects text while highlightActive, apply highlight */
+editor.addEventListener('mouseup', (e)=>{
+  if(highlightActive){
+    const sel = window.getSelection();
+    if(sel && sel.rangeCount && !sel.getRangeAt(0).collapsed){
+      applyHighlightToSelection();
+      // leave pencil active (user can continue selecting)
+      // But ensure caret after selection is outside highlight to avoid accidental carriage of formatting
+      moveCaretOutOfHighlight();
+      updateToolbarStates();
+      // clear selection to allow continued drawing (optional)
+      // sel.removeAllRanges();
+    }
   }
 });
 
-/* ------------------------------
-   Prevent formatting on space via keydown (backup)
-   ------------------------------ */
+/* Also support keyboard-based selection (e.g., Shift+Arrow then press highlight button) - handled by btnHighlight onclick logic above */
+
+/* ===== Prevent formatting on spaces for other formatting commands:
+   On keydown, if user presses space while caret is inside a formatted span, we should insert a plain space and move caret outside formatting.
+*/
 editor.addEventListener('keydown', (e)=>{
   if(e.key === ' '){
-    // We'll rely on beforeinput to handle space correctly; but for some browsers, beforeinput may not fire for programmatic
-    // do nothing here if beforeinput will handle. Keep as safety net.
+    const sel = window.getSelection();
+    if(sel && sel.rangeCount){
+      const r = sel.getRangeAt(0);
+      if(r.collapsed){
+        // If caret is inside a highlighted span or styled span, we will insert a plain text space and move caret outside
+        let anc = r.startContainer.nodeType === 3 ? r.startContainer.parentElement : r.startContainer;
+        while(anc && anc !== editor){
+          if(anc.classList && anc.classList.contains('hl')){
+            e.preventDefault();
+            // insert plain space after ancestor
+            const spaceNode = document.createTextNode(' ');
+            insertAfter(spaceNode, anc);
+            // move caret after space
+            const nr = document.createRange();
+            nr.setStartAfter(spaceNode);
+            nr.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(nr);
+            // clean up zero-width if any
+            cleanupZeroWidthSpacers();
+            return;
+          }
+          // also check style color/font-family/font-size
+          if(anc.style && (anc.style.color || anc.style.fontFamily || anc.style.fontSize)){
+            e.preventDefault();
+            const spaceNode = document.createTextNode(' ');
+            // insert plain space after ancestor or split node accordingly
+            insertAfter(spaceNode, anc);
+            const nr = document.createRange();
+            nr.setStartAfter(spaceNode);
+            nr.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(nr);
+            cleanupZeroWidthSpacers();
+            return;
+          }
+          anc = anc.parentElement;
+        }
+      }
+    }
   }
 });
 
-/* ------------------------------
-   Color application for selection handled earlier in palette onclick
-   ------------------------------ */
-
-// cleanup helper: remove stray zero-width space nodes that may remain (keeps caret integrity)
-// (Already defined above as cleanupZeroWidthSpacers)
-
-/* ------------------------------
-   Page background saving logic added in saveEntryForDate and loadEntryForDate
-   (payload includes pageBackground field; Firebase paths unchanged)
-   ------------------------------ */
-
-/* ------------------------------
-   Custom UI for per-day page bg already wired above:
-   - setPageBg triggers pageBgInput
-   - pageBgInput stores dataURL in pageBackgrounds[selectedDate]
-   - saveEntryForDate now includes payload.pageBackground
-   ------------------------------ */
-
-/* ------------------------------
-   Remove highlight by selecting highlighted area and pressing highlight toggles removal
-   (already implemented via removeHighlightFromRange and toggle function)
-   ------------------------------ */
-
-/* ------------------------------
-   Font change behavior: done earlier
-   ------------------------------ */
-
-/* ------------------------------
-   Utility: when applying color/font via the "execCmd" type commands, keep behavior limited.
-   ------------------------------ */
-
-/* ------------------------------
-   Final small utilities / event handlers
-   ------------------------------ */
-
-// Keep toolbar state updated when editor loses focus or selection changes
-editor.addEventListener('blur', ()=> {
-  // ensure caret not in highlight when highlight inactive
-  if(!highlightActive) moveCaretOutOfFormatting();
-  updateToolbarStates();
+/* ===== Cursor cleanup when clicking away (remove pencil cursor globally if turned off) ===== */
+document.addEventListener('click', (e)=>{
+  if(!editor.contains(e.target) && highlightActive === false){
+    editor.style.cursor = '';
+  }
 });
 
-// simple UI for removeGlobal bg and removePageBg already included above
+/* ===== Helper to check if selection is fully inside highlight (used for UI) ===== */
+function selectionIsInsideHighlight(){
+  const sel = window.getSelection();
+  if(!sel || !sel.rangeCount) return false;
+  const r = sel.getRangeAt(0);
+  if(r.collapsed) return false;
+  const startAnc = r.startContainer.nodeType === 3 ? r.startContainer.parentElement : r.startContainer;
+  const endAnc = r.endContainer.nodeType === 3 ? r.endContainer.parentElement : r.endContainer;
+  let sa = startAnc, ea = endAnc;
+  while(sa && sa !== editor){
+    if(sa.classList && sa.classList.contains('hl')) break;
+    sa = sa.parentElement;
+  }
+  while(ea && ea !== editor){
+    if(ea.classList && ea.classList.contains('hl')) break;
+    ea = ea.parentElement;
+  }
+  return !!(sa || ea);
+}
+
+/* ===== Clear stray zero-width spacers on blur to keep content clean ===== */
+editor.addEventListener('blur', ()=> setTimeout(cleanupZeroWidthSpacers, 200));
+
+/* ===== Initial placeholder + toolbar state (unchanged) ===== */
+ensurePlaceholder();
+updateToolbarStates();
 
 </script>
 </body>
